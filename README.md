@@ -105,6 +105,41 @@ añade también `CROSS_SITE_COOKIES=true` en el backend: la cookie de sesión pa
 Requiere HTTPS en el backend. Bajo un mismo dominio no hace falta y la cookie se queda
 en `strict`, que es más seguro.
 
+### El backend en Railway
+
+El repositorio trae `railway.json`: Railway compila `shared` y `backend`, genera el
+cliente de Prisma, sincroniza el esquema al arrancar y expone `/api/health` como
+comprobación de salud. El servicio se crea sobre la **raíz del repositorio** (es un
+monorepo con workspaces de npm), no sobre `backend/`.
+
+1. Crea el proyecto y añade una base de datos **PostgreSQL** desde el panel o con
+   `railway add --database postgres`.
+2. Configura las variables del servicio del backend:
+
+```env
+NODE_ENV=production
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+PUBLIC_URL=https://tu-backend.up.railway.app
+CORS_ORIGINS=https://tu-frontend.vercel.app
+CROSS_SITE_COOKIES=true
+JWT_SECRET=...
+JWT_REFRESH_SECRET=...
+NPM_CONFIG_PRODUCTION=false          # con NODE_ENV=production npm omitiría tsc y prisma
+NIXPACKS_NO_PRUNE=1                  # prisma se usa también al arrancar
+```
+
+3. Genera un dominio público para el servicio y pon esa URL en `PUBLIC_URL` y en la
+   variable `VITE_API_URL` del proyecto de Vercel. `CORS_ORIGINS` tiene que llevar el
+   dominio exacto del frontend, sin barra final.
+
+`PORT` lo inyecta Railway y el servidor lo respeta. Redis es opcional: añade el plugin y
+`REDIS_URL=${{Redis.REDIS_URL}}` solo cuando quieras más de una instancia.
+
+**Archivos subidos.** El disco de un contenedor es efímero: con `STORAGE_DRIVER=local`
+las subidas desaparecen en cada despliegue. Monta un volumen en `/app/backend/storage` y
+pon `STORAGE_LOCAL_DIR=/app/backend/storage`, o usa `STORAGE_DRIVER=s3` con S3, R2 o
+Spaces.
+
 ---
 
 ## Arquitectura
