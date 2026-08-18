@@ -1,0 +1,165 @@
+.shell {
+  display: grid;
+  grid-template-columns: var(--nav-width) minmax(0, 1fr);
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* -------------------------------- Navegación ------------------------------ */
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+}
+
+.brand {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-size: var(--text-lg);
+}
+
+.navItem {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 56px;
+  padding: var(--space-2) 0;
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 10px;
+  transition:
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.navItem:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.navItemActive,
+.navItemActive:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.navBadge {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+}
+
+.navSpacer {
+  flex: 1;
+}
+
+.navFooter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.presenceButton {
+  border-radius: var(--radius-full);
+  transition: transform var(--duration-fast) var(--ease);
+}
+
+.presenceButton:hover {
+  transform: scale(1.05);
+}
+
+/* --------------------------------- Paneles -------------------------------- */
+
+.workspace {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  min-width: 0;
+  height: 100%;
+}
+
+.workspaceWide {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+}
+
+/* --------------------------------- Compacto -------------------------------- */
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .nav {
+    grid-row: 2;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    padding: var(--space-1) var(--space-2);
+    padding-bottom: max(var(--space-1), env(safe-area-inset-bottom));
+    border-right: none;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .brand,
+  .navSpacer {
+    display: none;
+  }
+
+  .navFooter {
+    flex-direction: row;
+  }
+
+  .navItem {
+    width: auto;
+    min-width: 48px;
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar,
+  .content {
+    grid-column: 1;
+    grid-row: 1;
+    border-right: none;
+  }
+
+  .paneHidden {
+    display: none;
+  }
+}

@@ -1,0 +1,153 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.hint {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.error {
+  font-size: var(--text-xs);
+  color: var(--danger);
+}
+
+.control {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 var(--space-3);
+  height: 38px;
+  color: var(--text);
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    background var(--duration-fast) var(--ease);
+}
+
+.control::placeholder {
+  color: var(--text-tertiary);
+}
+
+.control:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.control:focus {
+  border-color: var(--accent-border);
+  outline: none;
+  background: var(--surface-3);
+}
+
+.control:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.invalid,
+.invalid:focus {
+  border-color: var(--danger);
+}
+
+.textarea {
+  height: auto;
+  min-height: 84px;
+  padding: var(--space-3);
+  resize: vertical;
+  line-height: var(--leading-normal);
+}
+
+.counter {
+  align-self: flex-end;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.withIcon {
+  position: relative;
+}
+
+.withIcon .control {
+  padding-left: 34px;
+}
+
+.iconSlot {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+/* -------------------------------- Interruptor ------------------------------ */
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+}
+
+.switchText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.switchTitle {
+  font-size: var(--text-base);
+  color: var(--text);
+}
+
+.switchHint {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  transition: background var(--duration) var(--ease);
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  background: var(--text-secondary);
+  transition:
+    transform var(--duration) var(--ease),
+    background var(--duration) var(--ease);
+}
+
+.switchOn {
+  background: var(--accent);
+  border-color: transparent;
+}
+
+.switchOn::after {
+  transform: translateX(18px);
+  background: var(--on-accent);
+}

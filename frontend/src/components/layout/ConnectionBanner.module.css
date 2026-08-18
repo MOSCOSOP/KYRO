@@ -1,0 +1,31 @@
+.banner {
+  position: fixed;
+  top: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  animation: kyro-rise var(--duration) var(--ease);
+}
+
+.offline {
+  color: var(--warning);
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-strong);
+  border-right-color: var(--warning);
+  border-radius: var(--radius-full);
+  animation: kyro-spin 0.7s linear infinite;
+}

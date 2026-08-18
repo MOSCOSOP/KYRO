@@ -1,0 +1,113 @@
+/**
+ * KYRO · tokens de diseño.
+ *
+ * Oscuro, sobrio y con poco contraste innecesario. Un solo acento (azul
+ * violáceo) que se usa con moderación: estado activo, foco y poco más.
+ * Ningún componente define colores propios: todos salen de aquí.
+ */
+
+:root {
+  /* ------------------------------- Superficies --------------------------- */
+  --bg: #0d0f13;
+  --surface: #14171d;
+  --surface-2: #1a1e25;
+  --surface-3: #20252e;
+  --surface-hover: #1e232b;
+  --border: #252a33;
+  --border-strong: #333a46;
+
+  /* --------------------------------- Texto ------------------------------- */
+  --text: #f1f3f5;
+  --text-secondary: #9299a5;
+  --text-tertiary: #6b7280;
+  --text-inverse: #0d0f13;
+
+  /* -------------------------------- Acento ------------------------------- */
+  --accent: #6b7bff;
+  --accent-hover: #7c8aff;
+  --accent-active: #5a69e8;
+  --accent-soft: rgba(107, 123, 255, 0.14);
+  --accent-softer: rgba(107, 123, 255, 0.08);
+  --accent-border: rgba(107, 123, 255, 0.35);
+  --on-accent: #ffffff;
+
+  /* -------------------------------- Estados ------------------------------ */
+  --success: #46c48a;
+  --success-soft: rgba(70, 196, 138, 0.14);
+  --warning: #e0b155;
+  --warning-soft: rgba(224, 177, 85, 0.14);
+  --danger: #e5657a;
+  --danger-hover: #ef7386;
+  --danger-soft: rgba(229, 101, 122, 0.14);
+
+  /* Presencia */
+  --presence-available: #46c48a;
+  --presence-away: #e0b155;
+  --presence-dnd: #e5657a;
+  --presence-offline: #6b7280;
+
+  /* ------------------------------ Tipografía ----------------------------- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu,
+    'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --text-xs: 0.6875rem; /* 11px */
+  --text-sm: 0.8125rem; /* 13px */
+  --text-base: 0.875rem; /* 14px */
+  --text-md: 0.9375rem; /* 15px */
+  --text-lg: 1.0625rem; /* 17px */
+  --text-xl: 1.375rem; /* 22px */
+  --text-2xl: 1.75rem; /* 28px */
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  /* -------------------------------- Espacio ------------------------------ */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* -------------------------------- Formas ------------------------------- */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.45);
+
+  /* ------------------------------ Movimiento ----------------------------- */
+  /* Discreto: solo lo justo para que la interfaz no dé saltos. */
+  --duration-fast: 100ms;
+  --duration: 160ms;
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* -------------------------------- Layout ------------------------------- */
+  --nav-width: 76px;
+  --sidebar-width: 320px;
+  --header-height: 56px;
+  --composer-min-height: 44px;
+
+  --z-base: 1;
+  --z-sticky: 10;
+  --z-dropdown: 100;
+  --z-overlay: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration: 0ms;
+  }
+}

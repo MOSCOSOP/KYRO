@@ -1,0 +1,381 @@
+// Esquema de datos de KYRO.
+//
+// Nota de arquitectura: el esquema evita enums, arrays y tipos nativos
+// específicos de un motor para poder correr sobre PostgreSQL (producción) y
+// sobre SQLite (desarrollo local sin dependencias). `scripts/db-setup.mjs`
+// adapta el bloque `datasource` según DATABASE_URL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  username     String  @unique
+  passwordHash String
+  displayName  String
+  avatarUrl    String?
+  bio          String?
+  accentColor  String?
+
+  // presence: available | away | dnd | invisible | offline
+  status           String    @default("available")
+  customStatusJson String?
+  activityJson     String?
+  lastSeenAt       DateTime?
+
+  preferencesJson String?
+  onboardedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens        RefreshToken[]
+  conversationMembers  ConversationMember[]
+  communityMembers     CommunityMember[]
+  messages             Message[]
+  attachments          Attachment[]
+  reactions            Reaction[]
+  savedMessages        SavedMessage[]
+  mentions             MessageMention[]
+  notifications        Notification[]        @relation("NotificationOwner")
+  actorNotifications   Notification[]        @relation("NotificationActor")
+  contactsRequested    Contact[]             @relation("ContactRequester")
+  contactsReceived     Contact[]             @relation("ContactAddressee")
+  ownedCommunities     Community[]           @relation("CommunityOwner")
+  createdConversations Conversation[]        @relation("ConversationCreator")
+  createdEvents        CommunityEvent[]      @relation("EventCreator")
+  eventAttendances     EventAttendee[]
+  callsInitiated       Call[]                @relation("CallInitiator")
+  callParticipations   CallParticipant[]
+
+  @@index([displayName])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Contact {
+  id          String @id @default(cuid())
+  requesterId String
+  addresseeId String
+  // pending | accepted | blocked
+  status      String @default("pending")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  requester User @relation("ContactRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("ContactAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+}
+
+model Community {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String?
+  iconUrl     String?
+  bannerUrl   String?
+  accentColor String?
+  isPublic    Boolean @default(true)
+  inviteCode  String  @unique
+  ownerId     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner    User              @relation("CommunityOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members  CommunityMember[]
+  channels Conversation[]
+  rooms    VoiceRoom[]
+  events   CommunityEvent[]
+
+  @@index([name])
+}
+
+model CommunityMember {
+  id          String  @id @default(cuid())
+  communityId String
+  userId      String
+  // owner | admin | moderator | member
+  role        String  @default("member")
+  nickname    String?
+  muted       Boolean @default(false)
+
+  joinedAt DateTime @default(now())
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, userId])
+  @@index([userId])
+}
+
+/// Toda superficie conversable: chat directo, grupo o canal de comunidad.
+model Conversation {
+  id          String  @id @default(cuid())
+  // direct | group | channel
+  type        String
+  communityId String?
+  // text | announcement (solo canales)
+  channelKind String?
+  name        String?
+  topic       String?
+  avatarUrl   String?
+  position    Int     @default(0)
+  createdById String?
+
+  lastMessageAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  community Community?           @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  createdBy User?                @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  members   ConversationMember[]
+  messages  Message[]
+  events    CommunityEvent[]
+  calls     Call[]
+
+  @@index([communityId, position])
+  @@index([lastMessageAt])
+}
+
+model ConversationMember {
+  id             String  @id @default(cuid())
+  conversationId String
+  userId         String
+  // owner | admin | moderator | member
+  role           String  @default("member")
+  muted          Boolean @default(false)
+  pinned         Boolean @default(false)
+
+  lastReadAt DateTime?
+  joinedAt   DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String  @id @default(cuid())
+  conversationId String
+  authorId       String?
+  content        String  @default("")
+  // text | system | call
+  type           String  @default("text")
+  metaJson       String?
+  replyToId      String?
+
+  editedAt  DateTime?
+  deletedAt DateTime?
+  pinnedAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  conversation Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author       User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  replyTo      Message?         @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      Message[]        @relation("MessageReplies")
+  attachments  Attachment[]
+  reactions    Reaction[]
+  mentions     MessageMention[]
+  savedBy      SavedMessage[]
+
+  @@index([conversationId, createdAt])
+  @@index([conversationId, pinnedAt])
+  @@index([authorId])
+}
+
+model MessageMention {
+  id        String @id @default(cuid())
+  messageId String
+  userId    String
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+}
+
+model Attachment {
+  id             String  @id @default(cuid())
+  messageId      String
+  conversationId String
+  uploaderId     String?
+  // image | video | audio | file
+  kind           String
+  url            String
+  storageKey     String
+  name           String
+  size           Int
+  mimeType       String
+  width          Int?
+  height         Int?
+  durationMs     Int?
+
+  createdAt DateTime @default(now())
+
+  message  Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  uploader User?   @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, kind])
+  @@index([messageId])
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+}
+
+model SavedMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  messageId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId])
+  @@index([userId])
+}
+
+model VoiceRoom {
+  id          String  @id @default(cuid())
+  communityId String
+  name        String
+  // voice | meeting | gaming
+  kind        String  @default("voice")
+  topic       String?
+
+  maxParticipants Int @default(20)
+  position        Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  community Community        @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  events    CommunityEvent[]
+
+  @@index([communityId, position])
+}
+
+model CommunityEvent {
+  id          String    @id @default(cuid())
+  communityId String
+  title       String
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime?
+  roomId      String?
+  channelId   String?
+  createdById String?
+
+  createdAt DateTime @default(now())
+
+  community Community       @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  room      VoiceRoom?      @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  channel   Conversation?   @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  createdBy User?           @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  attendees EventAttendee[]
+
+  @@index([communityId, startsAt])
+}
+
+model EventAttendee {
+  id      String @id @default(cuid())
+  eventId String
+  userId  String
+
+  createdAt DateTime @default(now())
+
+  event CommunityEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+model Notification {
+  id       String  @id @default(cuid())
+  userId   String
+  // message | mention | invite | contact_request | announcement | call | activity | event
+  type     String
+  title    String
+  body     String?
+  dataJson String?
+  actorId  String?
+
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user  User  @relation("NotificationOwner", fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+model Call {
+  id             String  @id @default(cuid())
+  conversationId String
+  initiatorId    String?
+  // audio | video
+  kind           String  @default("audio")
+  // ringing | ongoing | ended | missed | declined
+  status         String  @default("ringing")
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  conversation Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  initiator    User?             @relation("CallInitiator", fields: [initiatorId], references: [id], onDelete: SetNull)
+  participants CallParticipant[]
+
+  @@index([conversationId, startedAt])
+}
+
+model CallParticipant {
+  id       String    @id @default(cuid())
+  callId   String
+  userId   String
+  joinedAt DateTime?
+  leftAt   DateTime?
+
+  call Call @relation(fields: [callId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([callId, userId])
+  @@index([userId])
+}

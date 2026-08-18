@@ -1,0 +1,72 @@
+# Infraestructura opcional para desarrollar KYRO con la misma pila que
+# producción: PostgreSQL, Redis y almacenamiento compatible con S3.
+#
+#   docker compose up -d
+#   backend/.env → DATABASE_URL, REDIS_URL, STORAGE_DRIVER=s3
+#
+# Sin Docker el proyecto también funciona: SQLite + memoria + disco local.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kyro-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kyro
+      POSTGRES_PASSWORD: kyro
+      POSTGRES_DB: kyro
+    ports:
+      - '5432:5432'
+    volumes:
+      - kyro-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U kyro']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: kyro-redis
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '6379:6379'
+    volumes:
+      - kyro-redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: kyro-minio
+    restart: unless-stopped
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: kyro
+      MINIO_ROOT_PASSWORD: kyro-secret
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - kyro-minio:/data
+
+  # Crea el bucket la primera vez y termina.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set kyro http://minio:9000 kyro kyro-secret; do sleep 2; done;
+      mc mb --ignore-existing kyro/kyro;
+      exit 0;
+      "
+
+volumes:
+  kyro-postgres:
+  kyro-redis:
+  kyro-minio:

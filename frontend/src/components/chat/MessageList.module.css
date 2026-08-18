@@ -1,0 +1,134 @@
+.scroller {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-anchor: none;
+  padding: var(--space-4) 0 var(--space-2);
+  position: relative;
+}
+
+.top {
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+}
+
+.intro {
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.introTitle {
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.introText {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  max-width: 52ch;
+  line-height: var(--leading-relaxed);
+}
+
+.daySeparator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-2);
+}
+
+.dayLine {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.dayLabel {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.newLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-5);
+  color: var(--danger);
+  font-size: var(--text-xs);
+}
+
+.newLine::before,
+.newLine::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--danger);
+  opacity: 0.4;
+}
+
+.jump {
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.jump:hover {
+  color: var(--text);
+}
+
+.typing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-5) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  min-height: 22px;
+}
+
+.dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+  animation: kyro-typing 1.2s infinite ease-in-out;
+}
+
+.dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes kyro-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}

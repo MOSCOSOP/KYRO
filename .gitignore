@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.log
+
+# Base de datos y esquema derivado de desarrollo (SQLite)
+backend/prisma/*.db
+backend/prisma/*.db-journal
+backend/prisma/schema.dev.prisma
+
+# Archivos subidos con el driver local
+backend/storage/
+
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Vercel
+.vercel/

@@ -1,0 +1,224 @@
+/* ------------------------------ Llamada activa ---------------------------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  animation: kyro-fade-in var(--duration) var(--ease);
+}
+
+.stage {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-content: center;
+  justify-items: center;
+}
+
+.tile {
+  position: relative;
+  width: 100%;
+  max-height: 62vh;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+.tileLabel {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: rgba(13, 15, 19, 0.7);
+  font-size: var(--text-xs);
+  color: var(--text);
+}
+
+.avatarStage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.callName {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.callState {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.control {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  transition:
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.control:hover {
+  background: var(--surface-3);
+}
+
+.controlActive {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.hangup {
+  background: var(--danger);
+  border-color: transparent;
+  color: #fff;
+  width: 56px;
+  height: 56px;
+}
+
+.hangup:hover {
+  background: var(--danger-hover);
+}
+
+/* ------------------------------ Llamada entrante --------------------------- */
+
+.incoming {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: var(--z-toast);
+  width: min(340px, calc(100vw - var(--space-8)));
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  animation: kyro-rise var(--duration) var(--ease);
+}
+
+.incomingHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.incomingText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.incomingName {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.incomingMeta {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.incomingActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* --------------------------------- Barra voz ------------------------------- */
+
+.voiceBar {
+  position: fixed;
+  left: calc(var(--nav-width) + var(--space-3));
+  bottom: var(--space-3);
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  max-width: 300px;
+}
+
+.voiceText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.voiceTitle {
+  font-size: var(--text-sm);
+  color: var(--success);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.voiceRoom {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voiceActions {
+  display: flex;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+@media (max-width: 900px) {
+  .voiceBar {
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: 72px;
+    max-width: none;
+  }
+
+  .stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
