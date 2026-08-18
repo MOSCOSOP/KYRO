@@ -29,7 +29,11 @@ interface MeshOptions {
   scope: { kind: 'room' | 'call'; id: string };
   selfId: string;
   iceServers: RTCIceServerConfig[];
-  /** El stream remoto de un participante ya está disponible. */
+  /**
+   * Audio y vídeo remotos llegan en streams separados a propósito: el elemento
+   * de vídeo puede ocultarse o silenciarse sin arrastrar el audio con él.
+   */
+  onRemoteAudio: (userId: string, stream: MediaStream) => void;
   onRemoteStream: (userId: string, stream: MediaStream) => void;
   /** El participante remoto está enviando vídeo utilizable (cámara o pantalla). */
   onRemoteVideo: (userId: string, hasVideo: boolean) => void;
@@ -42,8 +46,9 @@ interface Peer {
   pc: RTCPeerConnection;
   audioSender: RTCRtpSender;
   videoSender: RTCRtpSender;
-  /** Stream propio de la malla: se le añaden las pistas remotas al llegar. */
-  remoteStream: MediaStream;
+  /** Streams propios de la malla: se les añaden las pistas remotas al llegar. */
+  remoteAudio: MediaStream;
+  remoteVideo: MediaStream;
   /** El cortés cede ante una colisión; el impaciente inicia la oferta. */
   polite: boolean;
   makingOffer: boolean;
@@ -124,10 +129,7 @@ export class PeerMesh {
 
   private createPeer(userId: string): Peer {
     rtcLog(`creando conexión con ${userId}`);
-    const pc = new RTCPeerConnection({
-      iceServers: this.options.iceServers,
-      bundlePolicy: 'max-bundle',
-    });
+    const pc = new RTCPeerConnection({ iceServers: this.options.iceServers });
 
     // Las dos m-lines quedan reservadas desde la primera oferta, con o sin
     // cámara: es lo que permite pasar de audio a vídeo sin renegociar.
@@ -138,7 +140,8 @@ export class PeerMesh {
       pc,
       audioSender: audioTransceiver.sender,
       videoSender: videoTransceiver.sender,
-      remoteStream: new MediaStream(),
+      remoteAudio: new MediaStream(),
+      remoteVideo: new MediaStream(),
       polite: !this.isInitiator(userId),
       makingOffer: false,
       ignoreOffer: false,
@@ -187,24 +190,34 @@ export class PeerMesh {
   }
 
   /**
-   * Las pistas remotas se agrupan en un stream propio de la malla. Llegan por
-   * separado (primero el audio, el vídeo cuando el otro enciende la cámara) y
-   * el elemento `<video>` ya enlazado las reproduce sin volver a enlazarse.
+   * Las pistas remotas se reparten en dos streams propios de la malla, uno de
+   * audio y otro de vídeo. Separarlos es lo que permite que la conversación se
+   * oiga aunque no haya imagen: el elemento de vídeo se puede ocultar, silenciar
+   * o no llegar a reproducirse sin dejar la llamada muda.
+   *
+   * `event.streams` viene vacío porque los senders se crean con
+   * `addTransceiver` y no llevan identificador de stream, así que la agrupación
+   * la hace la malla y no el navegador.
    */
   private receiveTrack(userId: string, peer: Peer, event: RTCTrackEvent) {
     const track = event.track;
     rtcLog(`pista remota recibida de ${userId}: ${track.kind}`);
 
-    if (!peer.remoteStream.getTracks().includes(track)) peer.remoteStream.addTrack(track);
-    this.options.onRemoteStream(userId, peer.remoteStream);
+    if (track.kind === 'audio') {
+      if (!peer.remoteAudio.getTracks().includes(track)) peer.remoteAudio.addTrack(track);
+      track.addEventListener('ended', () => peer.remoteAudio.removeTrack(track));
+      this.options.onRemoteAudio(userId, peer.remoteAudio);
+      return;
+    }
 
-    if (track.kind !== 'video') return;
+    if (!peer.remoteVideo.getTracks().includes(track)) peer.remoteVideo.addTrack(track);
+    this.options.onRemoteStream(userId, peer.remoteVideo);
 
     // Una pista de vídeo llega silenciada y se «desmutea» cuando empieza a
     // fluir; al apagar la cámara vuelve a silenciarse sin renegociar. Es la
     // señal correcta para decidir si hay imagen que mostrar.
     const update = () => {
-      const hasVideo = peer.remoteStream
+      const hasVideo = peer.remoteVideo
         .getVideoTracks()
         .some((item) => item.readyState === 'live' && !item.muted);
       if (hasVideo === peer.hasRemoteVideo) return;
@@ -216,7 +229,7 @@ export class PeerMesh {
     track.addEventListener('mute', update);
     track.addEventListener('unmute', update);
     track.addEventListener('ended', () => {
-      peer.remoteStream.removeTrack(track);
+      peer.remoteVideo.removeTrack(track);
       update();
     });
     update();
@@ -309,7 +322,8 @@ export class PeerMesh {
     peer.pc.ontrack = null;
     peer.pc.oniceconnectionstatechange = null;
     peer.pc.onconnectionstatechange = null;
-    for (const track of peer.remoteStream.getTracks()) peer.remoteStream.removeTrack(track);
+    for (const track of peer.remoteAudio.getTracks()) peer.remoteAudio.removeTrack(track);
+    for (const track of peer.remoteVideo.getTracks()) peer.remoteVideo.removeTrack(track);
     peer.pendingCandidates = [];
     peer.pc.close();
     this.peers.delete(userId);

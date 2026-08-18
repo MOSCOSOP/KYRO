@@ -12,7 +12,7 @@ export function VoiceBar() {
   const roomId = useVoice((state) => state.roomId);
   const roomName = useVoice((state) => state.roomName);
   const participants = useVoice((state) => state.participants);
-  const remoteStreams = useVoice((state) => state.remoteStreams);
+  const remoteAudio = useVoice((state) => state.remoteAudio);
   const micMuted = useVoice((state) => state.micMuted);
   const deafened = useVoice((state) => state.deafened);
   const sharingScreen = useVoice((state) => state.sharingScreen);
@@ -65,7 +65,7 @@ export function VoiceBar() {
         </IconButton>
       </span>
 
-      {Object.entries(remoteStreams).map(([userId, stream]) => (
+      {Object.entries(remoteAudio).map(([userId, stream]) => (
         <RemoteAudio key={userId} stream={stream} muted={deafened} />
       ))}
     </div>
@@ -76,8 +76,13 @@ function RemoteAudio({ stream, muted }: { stream: MediaStream; muted: boolean })
   const ref = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
-    if (ref.current) ref.current.srcObject = stream;
+    const element = ref.current;
+    if (!element) return;
+    element.srcObject = stream;
+    void element.play().catch(() => undefined);
   }, [stream]);
 
-  return <audio ref={ref} autoPlay muted={muted} style={{ display: 'none' }} />;
+  // Sin `controls` el elemento no pinta nada: no hace falta ocultarlo, y
+  // ocultarlo con `display:none` es justo lo que impide oírlo en algunos móviles.
+  return <audio ref={ref} autoPlay playsInline muted={muted} />;
 }

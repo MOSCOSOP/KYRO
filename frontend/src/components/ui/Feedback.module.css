@@ -12,6 +12,7 @@
   padding: var(--space-8);
 }
 
+/* Brillo lento y de poco contraste: se nota que está cargando, no molesta. */
 .skeleton {
   background: linear-gradient(
     90deg,
@@ -20,7 +21,7 @@
     var(--surface-2) 63%
   );
   background-size: 200% 100%;
-  animation: kyro-shimmer 1.4s ease-in-out infinite;
+  animation: kyro-shimmer 2.2s ease-in-out infinite;
   border-radius: var(--radius-sm);
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import {
@@ -13,6 +13,7 @@ import {
   SwitchCamera,
   Video,
   VideoOff,
+  Volume2,
   Wifi,
   WifiOff,
 } from 'lucide-react';
@@ -29,6 +30,7 @@ export function CallOverlay() {
   const incoming = useCalls((state) => state.incoming);
   const call = useCalls((state) => state.call);
   const localStream = useCalls((state) => state.localStream);
+  const remoteAudio = useCalls((state) => state.remoteAudio);
   const remoteStreams = useCalls((state) => state.remoteStreams);
   const remoteVideo = useCalls((state) => state.remoteVideo);
   const micMuted = useCalls((state) => state.micMuted);
@@ -81,6 +83,8 @@ export function CallOverlay() {
 
   return createPortal(
     <div className={styles.overlay} role="dialog" aria-label="Llamada en curso">
+      <RemoteAudioLayer streams={remoteAudio} />
+
       <header className={styles.callHeader}>
         <span className={styles.callHeading}>
           <span className={styles.callTitle}>
@@ -237,6 +241,57 @@ function ConnectionBadge({ phase }: { phase: CallPhase }) {
   );
 }
 
+/**
+ * El audio de los demás vive en sus propios elementos, fuera de los tiles de
+ * vídeo. Así se sigue oyendo la llamada aunque no haya imagen, aunque el vídeo
+ * esté oculto o aunque el navegador se niegue a reproducirlo.
+ *
+ * Si el navegador bloquea la reproducción automática, se pide un toque: es la
+ * única forma de desbloquearla y callarlo en silencio sería peor.
+ */
+function RemoteAudioLayer({ streams }: { streams: Record<string, MediaStream> }) {
+  const elements = useRef(new Map<string, HTMLAudioElement>());
+  const [blocked, setBlocked] = useState(false);
+
+  const play = useCallback((element: HTMLAudioElement) => {
+    element.play().then(
+      () => setBlocked(false),
+      () => setBlocked(true),
+    );
+  }, []);
+
+  const attach = useCallback(
+    (userId: string, element: HTMLAudioElement | null) => {
+      if (!element) {
+        elements.current.delete(userId);
+        return;
+      }
+      elements.current.set(userId, element);
+      const stream = streams[userId];
+      if (stream && element.srcObject !== stream) element.srcObject = stream;
+      play(element);
+    },
+    [play, streams],
+  );
+
+  const unlock = () => {
+    for (const element of elements.current.values()) play(element);
+  };
+
+  return (
+    <>
+      {Object.keys(streams).map((userId) => (
+        <audio key={userId} ref={(element) => attach(userId, element)} autoPlay playsInline />
+      ))}
+      {blocked ? (
+        <button type="button" className={styles.audioUnlock} onClick={unlock}>
+          <Volume2 size={15} /> Toca para escuchar la llamada
+        </button>
+      ) : null}
+    </>
+  );
+}
+
 function RemoteTile({
   user,
   stream,
@@ -248,34 +303,31 @@ function RemoteTile({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // El audio remoto se reproduce siempre, con o sin imagen: el elemento se
-  // mantiene enlazado y solo se oculta cuando no hay vídeo que mostrar.
   useEffect(() => {
     const element = videoRef.current;
     if (!element || !stream) return;
     element.srcObject = stream;
-    // Autoplay con sonido puede quedar bloqueado; reintentar en silencio es
-    // preferible a dejar la llamada muda sin decir nada.
     void element.play().catch(() => undefined);
-    return () => {
-      element.srcObject = null;
-    };
   }, [stream]);
 
   return (
     <div className={clsx(styles.tile, styles.tileRemote)}>
-      {stream ? (
-        <video
-          ref={videoRef}
-          className={styles.video}
-          autoPlay
-          playsInline
-          style={{ display: hasVideo ? 'block' : 'none' }}
-        />
-      ) : null}
+      {/*
+        Silenciado a propósito: el sonido sale del elemento de audio. Un vídeo
+        silenciado además puede reproducirse siempre, sin permiso del usuario.
+      */}
+      <video
+        ref={videoRef}
+        className={clsx(styles.video, styles.videoFill, !hasVideo && styles.videoHidden)}
+        autoPlay
+        playsInline
+        muted
+      />
       {!hasVideo ? (
         <div className={styles.avatarStage}>
-          <Avatar user={user} size="xl" />
+          <span className={clsx(styles.halo, !stream && styles.haloPulse)}>
+            <Avatar user={user} size="xl" />
+          </span>
           <span className={styles.callState}>{stream ? 'Solo audio' : 'Conectando…'}</span>
         </div>
       ) : null}
@@ -310,7 +362,11 @@ function LocalTile({
     <div className={clsx(styles.tile, styles.localTile)}>
       <video
         ref={videoRef}
-        className={clsx(styles.video, !sharing && styles.mirrored)}
+        className={clsx(
+          styles.video,
+          styles.videoFill,
+          sharing ? styles.videoContain : styles.mirrored,
+        )}
         autoPlay
         playsInline
         muted

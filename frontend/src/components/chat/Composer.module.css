@@ -36,15 +36,24 @@
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  transition: border-color var(--duration-fast) var(--ease);
+  box-shadow: var(--inset-top);
+  transition:
+    border-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease),
+    background var(--duration) var(--ease);
 }
 
 .boxWithReply {
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
+/* Al escribir, la caja se ilumina desde el borde. Nada de sombras duras. */
 .box:focus-within {
   border-color: var(--accent-border);
+  background: var(--surface-3);
+  box-shadow:
+    var(--inset-top),
+    0 0 0 3px var(--accent-softer);
 }
 
 .input {
@@ -124,10 +133,15 @@
   right: 0;
   width: 296px;
   padding: var(--space-2);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
+  box-shadow:
+    var(--shadow-lg),
+    var(--inset-top);
+  transform-origin: bottom right;
+  animation: kyro-pop var(--duration-fast) var(--ease);
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   gap: 2px;

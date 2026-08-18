@@ -49,9 +49,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className={styles.shell}>
       <nav className={styles.nav} aria-label="Navegación principal">
-        <span className={styles.brand} aria-hidden>
-          K
-        </span>
+        <BrandMark />
 
         <NavItem to="/" label="Inicio" icon={<Home size={19} />} end />
         <NavItem
@@ -148,6 +146,33 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <CustomStatusModal open={statusOpen} onClose={() => setStatusOpen(false)} />
     </div>
+  );
+}
+
+/**
+ * Marca de la aplicación: `public/logo.png`. Si el archivo no está, se cae a la
+ * inicial en lugar de dejar el hueco de una imagen rota.
+ */
+function BrandMark() {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <span className={styles.brand} aria-hidden>
+        {brand.name.charAt(0)}
+      </span>
+    );
+  }
+
+  return (
+    <span className={styles.brand}>
+      <img
+        src="/logo.png"
+        alt={brand.name}
+        className={styles.brandImage}
+        onError={() => setFailed(true)}
+      />
+    </span>
   );
 }
 

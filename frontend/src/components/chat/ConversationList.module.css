@@ -41,6 +41,7 @@
 }
 
 .item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -49,7 +50,30 @@
   border-radius: var(--radius);
   text-align: left;
   color: inherit;
-  transition: background var(--duration-fast) var(--ease);
+  transition:
+    background var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+/*
+ * Marca lateral de la conversación abierta. Crece desde el centro en lugar de
+ * aparecer de golpe, que es lo que hace que cambiar de conversación se sienta
+ * continuo en vez de a saltos.
+ */
+.item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 60%;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  transform: translateY(-50%) scaleY(0);
+  opacity: 0;
+  transition:
+    transform var(--duration) var(--ease),
+    opacity var(--duration) var(--ease);
 }
 
 .item:hover {
@@ -60,6 +84,12 @@
 .itemActive,
 .itemActive:hover {
   background: var(--surface-3);
+  box-shadow: var(--inset-top);
+}
+
+.itemActive::before {
+  transform: translateY(-50%) scaleY(1);
+  opacity: 1;
 }
 
 .body {

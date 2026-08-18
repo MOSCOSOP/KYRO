@@ -20,6 +20,8 @@ interface VoiceState {
   participants: RoomParticipant[];
   localStream: MediaStream | null;
   screenTrack: MediaStreamTrack | null;
+  /** Audio de los demás, en su propio stream: es lo que se reproduce. */
+  remoteAudio: Record<string, MediaStream>;
   remoteStreams: Record<string, MediaStream>;
   /** Quién está enviando vídeo (una pantalla compartida) ahora mismo. */
   remoteVideo: Record<string, boolean>;
@@ -51,6 +53,7 @@ export const useVoice = create<VoiceState>((set, get) => ({
   participants: [],
   localStream: null,
   screenTrack: null,
+  remoteAudio: {},
   remoteStreams: {},
   remoteVideo: {},
   micMuted: false,
@@ -88,6 +91,9 @@ export const useVoice = create<VoiceState>((set, get) => ({
         scope: { kind: 'room', id: roomId },
         selfId,
         iceServers,
+        onRemoteAudio: (userId, remote) => {
+          set({ remoteAudio: { ...get().remoteAudio, [userId]: remote } });
+        },
         onRemoteStream: (userId, remote) => {
           set({ remoteStreams: { ...get().remoteStreams, [userId]: remote } });
         },
@@ -95,9 +101,10 @@ export const useVoice = create<VoiceState>((set, get) => ({
           set({ remoteVideo: { ...get().remoteVideo, [userId]: hasVideo } });
         },
         onPeerClosed: (userId) => {
+          const { [userId]: _audio, ...audio } = get().remoteAudio;
           const { [userId]: _stream, ...streams } = get().remoteStreams;
           const { [userId]: _video, ...video } = get().remoteVideo;
-          set({ remoteStreams: streams, remoteVideo: video });
+          set({ remoteAudio: audio, remoteStreams: streams, remoteVideo: video });
         },
       });
       mesh.setLocalStream(stream);
@@ -135,6 +142,7 @@ export const useVoice = create<VoiceState>((set, get) => ({
       participants: [],
       localStream: null,
       screenTrack: null,
+      remoteAudio: {},
       remoteStreams: {},
       remoteVideo: {},
       mesh: null,

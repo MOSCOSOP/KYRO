@@ -11,12 +11,33 @@
     background var(--duration-fast) var(--ease),
     border-color var(--duration-fast) var(--ease),
     color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease),
     opacity var(--duration-fast) var(--ease);
+}
+
+/* Se levanta un poco al pasar por encima y se comprime al pulsar. */
+.button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.975);
+  box-shadow: none;
 }
 
 .button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* En pantallas táctiles no hay puntero que se pose: sobra el relieve. */
+@media (hover: none) {
+  .button:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+  }
 }
 
 .md {
@@ -42,9 +63,11 @@
 .primary {
   background: var(--accent);
   color: var(--on-accent);
+  box-shadow: var(--inset-top);
 }
 .primary:hover:not(:disabled) {
   background: var(--accent-hover);
+  box-shadow: 0 4px 14px rgba(107, 123, 255, 0.28);
 }
 .primary:active:not(:disabled) {
   background: var(--accent-active);
@@ -96,12 +119,17 @@
   color: var(--text-secondary);
   transition:
     background var(--duration-fast) var(--ease),
-    color var(--duration-fast) var(--ease);
+    color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
 }
 
 .icon:hover:not(:disabled) {
   background: var(--surface-2);
   color: var(--text);
+}
+
+.icon:active:not(:disabled) {
+  transform: scale(0.92);
 }
 
 .icon:disabled {

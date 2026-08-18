@@ -4,11 +4,15 @@
   min-width: 200px;
   max-width: 280px;
   padding: var(--space-1);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  animation: kyro-rise var(--duration-fast) var(--ease);
+  box-shadow:
+    var(--shadow-lg),
+    var(--inset-top);
+  transform-origin: top center;
+  animation: kyro-pop var(--duration-fast) var(--ease);
 }
 
 .item {

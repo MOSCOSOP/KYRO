@@ -55,13 +55,7 @@
 }
 
 .spin {
-  animation: kyro-spin 1s linear infinite;
-}
-
-@keyframes kyro-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  animation: kyro-spin 1.4s linear infinite;
 }
 
 .stage {
@@ -98,11 +92,31 @@
   max-height: 60vh;
 }
 
+/*
+ * `contain` y no `cover`: recortar una cámara la deja demasiado cerca y en una
+ * pantalla compartida esconde justo los bordes, que es donde está el contenido.
+ * La imagen se adapta a la forma del hueco en lugar de rellenarlo a costa de
+ * cortarla, y eso vale igual en un monitor que en un móvil en vertical.
+ */
 .video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   background: #000;
+}
+
+.videoFill {
+  position: absolute;
+  inset: 0;
+}
+
+/* Oculto pero reproduciéndose: el elemento sigue vivo y el audio no se corta. */
+.videoHidden {
+  opacity: 0;
+}
+
+.videoContain {
+  object-fit: contain;
 }
 
 /* La vista previa propia se espeja: es lo que uno espera de un espejo. */
@@ -121,11 +135,84 @@
   border-color: var(--border-strong);
   box-shadow: var(--shadow-lg);
   z-index: var(--z-base);
+  animation: kyro-tile-in var(--duration-slow) var(--ease);
+}
+
+/* En un hueco pequeño la cámara sí se recorta: llena mejor y no molesta. */
+.localTile .video:not(.videoContain) {
+  object-fit: cover;
+}
+
+@keyframes kyro-tile-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (min-width: 640px) {
   .localTile {
     aspect-ratio: 16 / 10;
+  }
+}
+
+/*
+ * Aviso de audio bloqueado por el navegador. Discreto, pero imposible de
+ * ignorar: sin un toque del usuario no hay forma de que suene.
+ */
+.audioUnlock {
+  position: absolute;
+  left: 50%;
+  top: var(--space-5);
+  transform: translateX(-50%);
+  z-index: var(--z-sticky);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  animation: kyro-rise var(--duration) var(--ease);
+}
+
+/* Halo ambiental detrás del avatar: profundidad, no foco de neón. */
+.halo {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.halo::before {
+  content: '';
+  position: absolute;
+  width: 190%;
+  height: 190%;
+  border-radius: var(--radius-full);
+  background: radial-gradient(circle, var(--accent-soft) 0%, transparent 70%);
+  filter: blur(6px);
+}
+
+.haloPulse::before {
+  animation: kyro-halo 3.2s var(--ease) infinite;
+}
+
+@keyframes kyro-halo {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
   }
 }
 

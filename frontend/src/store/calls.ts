@@ -36,6 +36,8 @@ interface CallsState {
   cameraTrack: MediaStreamTrack | null;
   screenTrack: MediaStreamTrack | null;
 
+  /** Audio remoto, en su propio elemento para que nunca dependa de la imagen. */
+  remoteAudio: Record<string, MediaStream>;
   remoteStreams: Record<string, MediaStream>;
   remoteVideo: Record<string, boolean>;
 
@@ -79,6 +81,7 @@ export const useCalls = create<CallsState>((set, get) => ({
   cameraTrack: null,
   screenTrack: null,
 
+  remoteAudio: {},
   remoteStreams: {},
   remoteVideo: {},
 
@@ -328,6 +331,9 @@ function openMesh(
     scope: { kind: 'call', id: call.id },
     selfId,
     iceServers,
+    onRemoteAudio: (userId, stream) => {
+      set({ remoteAudio: { ...get().remoteAudio, [userId]: stream } });
+    },
     onRemoteStream: (userId, stream) => {
       set({ remoteStreams: { ...get().remoteStreams, [userId]: stream } });
     },
@@ -335,9 +341,10 @@ function openMesh(
       set({ remoteVideo: { ...get().remoteVideo, [userId]: hasVideo } });
     },
     onPeerClosed: (userId) => {
+      const { [userId]: _audio, ...audio } = get().remoteAudio;
       const { [userId]: _stream, ...streams } = get().remoteStreams;
       const { [userId]: _video, ...video } = get().remoteVideo;
-      set({ remoteStreams: streams, remoteVideo: video });
+      set({ remoteAudio: audio, remoteStreams: streams, remoteVideo: video });
     },
     onConnectionState: (_userId, state) => {
       if (get().phase === 'idle') return;
@@ -388,6 +395,7 @@ function teardown(set: Setter, get: Getter) {
     phase: 'idle',
     call: null,
     mesh: null,
+    remoteAudio: {},
     remoteStreams: {},
     remoteVideo: {},
     ...idleMedia(),

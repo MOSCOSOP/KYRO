@@ -86,8 +86,10 @@
   border-width: 3px;
 }
 
+/* Un halo mínimo distingue a quien está disponible; el resto no lo lleva. */
 .available {
   background: var(--presence-available);
+  box-shadow: 0 0 0 2px var(--success-soft);
 }
 .away {
   background: var(--presence-away);

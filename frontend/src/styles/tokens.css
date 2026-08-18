@@ -86,10 +86,38 @@
   --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.45);
 
   /* ------------------------------ Movimiento ----------------------------- */
-  /* Discreto: solo lo justo para que la interfaz no dé saltos. */
-  --duration-fast: 100ms;
-  --duration: 160ms;
+  /*
+   * Tres duraciones para toda la aplicación. Si algo necesita otra, casi
+   * siempre es que no debería animarse.
+   *   fast   → estados de un control (hover, pulsación)
+   *   normal → aparecer y desaparecer (menús, modales, mensajes)
+   *   slow   → entradas de superficies grandes y ambiente
+   */
+  --duration-fast: 130ms;
+  --duration: 200ms;
+  --duration-slow: 340ms;
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Un rebote mínimo, solo para lo que aparece de la nada (reacciones). */
+  --ease-pop: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  /* ------------------------- Profundidad y vidrio ------------------------ */
+  /*
+   * Las capas van de fondo a flotante. Cada nivel sube un poco de tono, de modo
+   * que la jerarquía se lee sin necesidad de bordes marcados.
+   */
+  --elevated: rgba(255, 255, 255, 0.03);
+  --elevated-strong: rgba(255, 255, 255, 0.05);
+  --inset-top: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  /* Vidrio: solo para superficies flotantes, nunca para el fondo. */
+  --glass: rgba(26, 30, 37, 0.72);
+  --glass-strong: rgba(20, 23, 29, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.07);
+  --glass-blur: blur(18px) saturate(140%);
+
+  /* Luz ambiental: azul violáceo muy desaturado y muy abierto. */
+  --ambient: rgba(107, 123, 255, 0.07);
+  --ambient-weak: rgba(107, 123, 255, 0.04);
 
   /* -------------------------------- Layout ------------------------------- */
   --nav-width: 76px;
@@ -109,5 +137,6 @@
   :root {
     --duration-fast: 0ms;
     --duration: 0ms;
+    --duration-slow: 0ms;
   }
 }
