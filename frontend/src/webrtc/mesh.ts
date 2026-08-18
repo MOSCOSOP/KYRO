@@ -1,11 +1,24 @@
 import type { RTCIceServerConfig, RtcSignal, RtcSignalPayload } from '@kyro/shared';
 import { getSocket } from '@/lib/socket';
+import { rtcLog, rtcWarn } from './log';
 
 /**
  * Malla WebRTC punto a punto.
  *
  * Sirve igual para una llamada privada y para una sala de voz de comunidad:
  * cambia solo el `scope`. El servidor únicamente enruta la señalización.
+ *
+ * Dos decisiones sostienen el resto:
+ *
+ * **Las m-lines se reservan al crear la conexión.** Cada peer nace con un
+ * transceiver de audio y otro de vídeo en `sendrecv`, aunque todavía no haya
+ * cámara. Encender la cámara a mitad de una llamada de voz es entonces un
+ * `replaceTrack` sobre un sender que ya existe y que ya viaja en el SDP: no
+ * hace falta renegociar y el vídeo aparece en el otro extremo al instante.
+ *
+ * **Negociación perfecta.** El orden de los identificadores decide quién es
+ * impaciente (ofrece) y quién es cortés (cede ante una colisión de ofertas).
+ * Sin esto, dos ofertas simultáneas dejan la conexión encallada.
  *
  * Grupos pequeños (hasta ~8 personas) funcionan bien en malla. Para grupos
  * grandes haría falta un SFU: la señalización ya está preparada para
@@ -16,37 +29,76 @@ interface MeshOptions {
   scope: { kind: 'room' | 'call'; id: string };
   selfId: string;
   iceServers: RTCIceServerConfig[];
+  /** El stream remoto de un participante ya está disponible. */
   onRemoteStream: (userId: string, stream: MediaStream) => void;
+  /** El participante remoto está enviando vídeo utilizable (cámara o pantalla). */
+  onRemoteVideo: (userId: string, hasVideo: boolean) => void;
   onPeerClosed: (userId: string) => void;
+  onConnectionState?: (userId: string, state: RTCPeerConnectionState) => void;
   onFailure?: (userId: string) => void;
 }
 
+interface Peer {
+  pc: RTCPeerConnection;
+  audioSender: RTCRtpSender;
+  videoSender: RTCRtpSender;
+  /** Stream propio de la malla: se le añaden las pistas remotas al llegar. */
+  remoteStream: MediaStream;
+  /** El cortés cede ante una colisión; el impaciente inicia la oferta. */
+  polite: boolean;
+  makingOffer: boolean;
+  ignoreOffer: boolean;
+  settingRemoteAnswer: boolean;
+  /**
+   * Falso hasta que termina el primer intercambio. Crear los transceivers
+   * dispara `negotiationneeded`, y ese primer aviso ya está cubierto por la
+   * oferta inicial: atenderlo provocaría una oferta duplicada.
+   */
+  negotiated: boolean;
+  hasRemoteVideo: boolean;
+  pendingCandidates: RTCIceCandidateInit[];
+}
+
 export class PeerMesh {
-  private peers = new Map<string, RTCPeerConnection>();
-  private pendingCandidates = new Map<string, RTCIceCandidateInit[]>();
-  private localStream: MediaStream | null = null;
+  private peers = new Map<string, Peer>();
+  private audioTrack: MediaStreamTrack | null = null;
+  private videoTrack: MediaStreamTrack | null = null;
   private closed = false;
 
   constructor(private options: MeshOptions) {}
 
+  /** Pistas locales iniciales. Las siguientes se cambian una a una. */
   setLocalStream(stream: MediaStream | null) {
-    this.localStream = stream;
-    if (!stream) return;
-    for (const [, peer] of this.peers) {
-      for (const track of stream.getTracks()) {
-        const sender = peer.getSenders().find((item) => item.track?.kind === track.kind);
-        if (sender) void sender.replaceTrack(track);
-        else peer.addTrack(track, stream);
-      }
-    }
+    this.setAudioTrack(stream?.getAudioTracks()[0] ?? null);
+    this.setVideoTrack(stream?.getVideoTracks()[0] ?? null);
   }
 
-  /** Sustituye una pista sin renegociar (cambio de cámara o pantalla). */
-  replaceTrack(track: MediaStreamTrack | null, kind: 'audio' | 'video') {
-    for (const [, peer] of this.peers) {
-      const sender = peer.getSenders().find((item) => item.track?.kind === kind);
-      if (sender) void sender.replaceTrack(track);
-    }
+  setAudioTrack(track: MediaStreamTrack | null) {
+    this.audioTrack = track;
+    rtcLog(track ? 'pista de audio local lista' : 'audio local retirado');
+    for (const [userId, peer] of this.peers) this.attach(userId, peer.audioSender, track, 'audio');
+  }
+
+  /**
+   * Cámara, pantalla o nada. Al reutilizar el sender reservado, el cambio llega
+   * al otro extremo sin renegociar y sin cortar el audio.
+   */
+  setVideoTrack(track: MediaStreamTrack | null) {
+    this.videoTrack = track;
+    rtcLog(track ? `pista de vídeo local lista (${track.label || 'sin etiqueta'})` : 'vídeo local retirado');
+    for (const [userId, peer] of this.peers) this.attach(userId, peer.videoSender, track, 'video');
+  }
+
+  private attach(
+    userId: string,
+    sender: RTCRtpSender,
+    track: MediaStreamTrack | null,
+    kind: 'audio' | 'video',
+  ) {
+    sender.replaceTrack(track).then(
+      () => rtcLog(`${kind} enviado a ${userId}`, track ? track.id : null),
+      (err) => rtcWarn(`no se pudo cambiar la pista de ${kind} hacia ${userId}`, err),
+    );
   }
 
   /** Ajusta la malla a la lista de participantes actual. */
@@ -55,111 +107,190 @@ export class PeerMesh {
     const others = new Set(userIds.filter((id) => id !== this.options.selfId));
 
     for (const [userId, peer] of this.peers) {
-      if (!others.has(userId)) {
-        peer.close();
-        this.peers.delete(userId);
-        this.options.onPeerClosed(userId);
-      }
+      if (!others.has(userId)) this.dropPeer(userId, peer);
     }
 
     for (const userId of others) {
       if (this.peers.has(userId)) continue;
       const peer = this.createPeer(userId);
-      // Regla estable para decidir quién ofrece: evita ofertas cruzadas.
-      if (this.isInitiator(userId)) void this.offer(userId, peer);
+      if (!peer.polite) void this.negotiate(userId, peer);
     }
   }
 
+  /** Regla estable para decidir quién ofrece: evita ofertas cruzadas. */
   private isInitiator(peerId: string) {
     return this.options.selfId < peerId;
   }
 
-  private createPeer(userId: string) {
-    const peer = new RTCPeerConnection({ iceServers: this.options.iceServers });
+  private createPeer(userId: string): Peer {
+    rtcLog(`creando conexión con ${userId}`);
+    const pc = new RTCPeerConnection({
+      iceServers: this.options.iceServers,
+      bundlePolicy: 'max-bundle',
+    });
+
+    // Las dos m-lines quedan reservadas desde la primera oferta, con o sin
+    // cámara: es lo que permite pasar de audio a vídeo sin renegociar.
+    const audioTransceiver = pc.addTransceiver('audio', { direction: 'sendrecv' });
+    const videoTransceiver = pc.addTransceiver('video', { direction: 'sendrecv' });
+
+    const peer: Peer = {
+      pc,
+      audioSender: audioTransceiver.sender,
+      videoSender: videoTransceiver.sender,
+      remoteStream: new MediaStream(),
+      polite: !this.isInitiator(userId),
+      makingOffer: false,
+      ignoreOffer: false,
+      settingRemoteAnswer: false,
+      negotiated: false,
+      hasRemoteVideo: false,
+      pendingCandidates: [],
+    };
     this.peers.set(userId, peer);
 
-    if (this.localStream) {
-      for (const track of this.localStream.getTracks()) {
-        peer.addTrack(track, this.localStream);
-      }
-    }
+    if (this.audioTrack) this.attach(userId, peer.audioSender, this.audioTrack, 'audio');
+    if (this.videoTrack) this.attach(userId, peer.videoSender, this.videoTrack, 'video');
 
-    peer.onicecandidate = (event) => {
-      if (event.candidate) {
-        this.send(userId, { type: 'candidate', candidate: event.candidate.toJSON() });
-      }
+    pc.onicecandidate = (event) => {
+      if (event.candidate) this.send(userId, { type: 'candidate', candidate: event.candidate.toJSON() });
     };
 
-    peer.ontrack = (event) => {
-      const [stream] = event.streams;
-      if (stream) this.options.onRemoteStream(userId, stream);
+    pc.onnegotiationneeded = () => {
+      if (!peer.negotiated) return;
+      rtcLog(`renegociación necesaria con ${userId}`);
+      void this.negotiate(userId, peer);
     };
 
-    peer.onconnectionstatechange = () => {
-      if (peer.connectionState === 'failed') {
-        this.options.onFailure?.(userId);
-        // Reintento: se rehace la conexión desde cero.
-        peer.close();
-        this.peers.delete(userId);
-        const retry = this.createPeer(userId);
-        if (this.isInitiator(userId)) void this.offer(userId, retry);
+    pc.ontrack = (event) => this.receiveTrack(userId, peer, event);
+
+    pc.oniceconnectionstatechange = () => {
+      rtcLog(`ICE con ${userId}: ${pc.iceConnectionState}`);
+    };
+
+    pc.onconnectionstatechange = () => {
+      const state = pc.connectionState;
+      rtcLog(`conexión con ${userId}: ${state}`);
+      this.options.onConnectionState?.(userId, state);
+      if (state !== 'failed') return;
+
+      this.options.onFailure?.(userId);
+      // Un reinicio de ICE recupera la ruta sin rehacer la sesión: conserva
+      // las pistas y no vuelve a pedir permisos de cámara ni micrófono.
+      if (!peer.polite) {
+        rtcLog(`reiniciando ICE con ${userId}`);
+        pc.restartIce();
       }
     };
 
     return peer;
   }
 
-  private async offer(userId: string, peer: RTCPeerConnection) {
+  /**
+   * Las pistas remotas se agrupan en un stream propio de la malla. Llegan por
+   * separado (primero el audio, el vídeo cuando el otro enciende la cámara) y
+   * el elemento `<video>` ya enlazado las reproduce sin volver a enlazarse.
+   */
+  private receiveTrack(userId: string, peer: Peer, event: RTCTrackEvent) {
+    const track = event.track;
+    rtcLog(`pista remota recibida de ${userId}: ${track.kind}`);
+
+    if (!peer.remoteStream.getTracks().includes(track)) peer.remoteStream.addTrack(track);
+    this.options.onRemoteStream(userId, peer.remoteStream);
+
+    if (track.kind !== 'video') return;
+
+    // Una pista de vídeo llega silenciada y se «desmutea» cuando empieza a
+    // fluir; al apagar la cámara vuelve a silenciarse sin renegociar. Es la
+    // señal correcta para decidir si hay imagen que mostrar.
+    const update = () => {
+      const hasVideo = peer.remoteStream
+        .getVideoTracks()
+        .some((item) => item.readyState === 'live' && !item.muted);
+      if (hasVideo === peer.hasRemoteVideo) return;
+      peer.hasRemoteVideo = hasVideo;
+      rtcLog(`vídeo remoto de ${userId}: ${hasVideo ? 'disponible' : 'sin imagen'}`);
+      this.options.onRemoteVideo(userId, hasVideo);
+    };
+
+    track.addEventListener('mute', update);
+    track.addEventListener('unmute', update);
+    track.addEventListener('ended', () => {
+      peer.remoteStream.removeTrack(track);
+      update();
+    });
+    update();
+  }
+
+  private async negotiate(userId: string, peer: Peer) {
     try {
-      const description = await peer.createOffer();
-      await peer.setLocalDescription(description);
-      this.send(userId, { type: 'offer', sdp: description.sdp ?? '' });
-    } catch {
-      // Una oferta fallida se recupera en el siguiente `sync`.
+      peer.makingOffer = true;
+      await peer.pc.setLocalDescription();
+      rtcLog(`oferta enviada a ${userId}`);
+      this.send(userId, { type: 'offer', sdp: peer.pc.localDescription?.sdp ?? '' });
+    } catch (err) {
+      rtcWarn(`no se pudo ofertar a ${userId}`, err);
+    } finally {
+      peer.makingOffer = false;
     }
   }
 
   async handleSignal(payload: RtcSignalPayload) {
     if (this.closed) return;
     const from = payload.from;
-    if (!from || payload.scope.id !== this.options.scope.id) return;
+    if (!from) return;
+    if (payload.scope.id !== this.options.scope.id) return;
+    if (payload.scope.kind !== this.options.scope.kind) return;
 
     let peer = this.peers.get(from);
     if (!peer) peer = this.createPeer(from);
-
+    const { pc } = peer;
     const signal = payload.signal;
+
     try {
-      if (signal.type === 'offer') {
-        await peer.setRemoteDescription({ type: 'offer', sdp: signal.sdp });
+      if (signal.type === 'offer' || signal.type === 'answer') {
+        const readyForOffer =
+          !peer.makingOffer && (pc.signalingState === 'stable' || peer.settingRemoteAnswer);
+        const collision = signal.type === 'offer' && !readyForOffer;
+
+        peer.ignoreOffer = !peer.polite && collision;
+        if (peer.ignoreOffer) {
+          rtcLog(`oferta de ${from} descartada por colisión`);
+          return;
+        }
+
+        peer.settingRemoteAnswer = signal.type === 'answer';
+        await pc.setRemoteDescription({ type: signal.type, sdp: signal.sdp });
+        peer.settingRemoteAnswer = false;
+        rtcLog(`descripción remota de ${from} aplicada (${signal.type})`);
         await this.drainCandidates(from, peer);
-        const answer = await peer.createAnswer();
-        await peer.setLocalDescription(answer);
-        this.send(from, { type: 'answer', sdp: answer.sdp ?? '' });
-      } else if (signal.type === 'answer') {
-        if (peer.signalingState === 'have-local-offer') {
-          await peer.setRemoteDescription({ type: 'answer', sdp: signal.sdp });
-          await this.drainCandidates(from, peer);
+
+        if (signal.type === 'offer') {
+          await pc.setLocalDescription();
+          this.send(from, { type: 'answer', sdp: pc.localDescription?.sdp ?? '' });
+          rtcLog(`respuesta enviada a ${from}`);
         }
-      } else if (signal.type === 'candidate') {
-        const candidate = signal.candidate as RTCIceCandidateInit;
-        if (peer.remoteDescription) await peer.addIceCandidate(candidate);
-        else {
-          const queue = this.pendingCandidates.get(from) ?? [];
-          queue.push(candidate);
-          this.pendingCandidates.set(from, queue);
-        }
+        peer.negotiated = true;
+        return;
       }
-    } catch {
-      // Señal inservible: la malla se recompone en el siguiente `sync`.
+
+      if (signal.type === 'candidate') {
+        const candidate = signal.candidate as RTCIceCandidateInit;
+        if (pc.remoteDescription) await pc.addIceCandidate(candidate);
+        else peer.pendingCandidates.push(candidate);
+      }
+    } catch (err) {
+      if (!peer.ignoreOffer) rtcWarn(`señal de ${from} descartada`, err);
     }
   }
 
-  private async drainCandidates(userId: string, peer: RTCPeerConnection) {
-    const queue = this.pendingCandidates.get(userId);
-    if (!queue) return;
-    this.pendingCandidates.delete(userId);
+  private async drainCandidates(userId: string, peer: Peer) {
+    if (peer.pendingCandidates.length === 0) return;
+    const queue = peer.pendingCandidates;
+    peer.pendingCandidates = [];
+    rtcLog(`aplicando ${queue.length} candidatos en espera de ${userId}`);
     for (const candidate of queue) {
-      await peer.addIceCandidate(candidate).catch(() => undefined);
+      await peer.pc.addIceCandidate(candidate).catch((err) => rtcWarn('candidato inservible', err));
     }
   }
 
@@ -167,14 +298,49 @@ export class PeerMesh {
     getSocket()?.emit('rtc:signal', { scope: this.options.scope, to, signal });
   }
 
+  /**
+   * Cierra un peer y suelta todo lo suyo. Las pistas locales no se tocan: son
+   * del store, que las comparte con los demás peers y con la vista previa.
+   */
+  private dropPeer(userId: string, peer: Peer) {
+    rtcLog(`cerrando conexión con ${userId}`);
+    peer.pc.onicecandidate = null;
+    peer.pc.onnegotiationneeded = null;
+    peer.pc.ontrack = null;
+    peer.pc.oniceconnectionstatechange = null;
+    peer.pc.onconnectionstatechange = null;
+    for (const track of peer.remoteStream.getTracks()) peer.remoteStream.removeTrack(track);
+    peer.pendingCandidates = [];
+    peer.pc.close();
+    this.peers.delete(userId);
+    this.options.onPeerClosed(userId);
+  }
+
   close() {
     this.closed = true;
-    for (const [userId, peer] of this.peers) {
-      peer.close();
-      this.options.onPeerClosed(userId);
-    }
+    for (const [userId, peer] of [...this.peers]) this.dropPeer(userId, peer);
     this.peers.clear();
-    this.pendingCandidates.clear();
+    this.audioTrack = null;
+    this.videoTrack = null;
+  }
+}
+
+/* --------------------------------- Medios ---------------------------------- */
+
+/** Traduce los errores de `getUserMedia` a algo que el usuario entienda. */
+export function mediaErrorMessage(err: unknown, kind: 'micrófono' | 'cámara' | 'medios') {
+  const name = err instanceof Error ? err.name : '';
+  switch (name) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return `Necesitamos permiso para usar la ${kind === 'medios' ? 'cámara y el micrófono' : kind}`;
+    case 'NotFoundError':
+    case 'OverconstrainedError':
+      return `No se ha encontrado ${kind === 'medios' ? 'ningún dispositivo' : `la ${kind}`}`;
+    case 'NotReadableError':
+      return `Otra aplicación está usando la ${kind}`;
+    default:
+      return err instanceof Error && err.message ? err.message : 'No se pudo acceder a tus dispositivos';
   }
 }
 
@@ -184,22 +350,72 @@ export async function requestMedia(video: boolean): Promise<MediaStream> {
     throw new Error('Este navegador no permite llamadas');
   }
   try {
-    return await navigator.mediaDevices.getUserMedia({
+    const stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true },
-      video: video ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false,
+      video: video ? videoConstraints() : false,
     });
+    rtcLog('medios locales concedidos', stream.getTracks().map((track) => track.kind));
+    return stream;
   } catch (err) {
-    const name = (err as Error).name;
-    if (name === 'NotAllowedError') throw new Error('Necesitamos permiso para usar el micrófono');
-    if (name === 'NotFoundError') throw new Error('No se ha encontrado micrófono ni cámara');
-    throw new Error('No se pudo acceder a tus dispositivos');
+    rtcWarn('getUserMedia falló', err);
+    throw new Error(mediaErrorMessage(err, video ? 'medios' : 'micrófono'));
+  }
+}
+
+export function videoConstraints(facingMode?: 'user' | 'environment'): MediaTrackConstraints {
+  return {
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    ...(facingMode ? { facingMode } : {}),
+  };
+}
+
+export async function requestCamera(facingMode: 'user' | 'environment'): Promise<MediaStreamTrack> {
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error('Este navegador no permite usar la cámara');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints(facingMode) });
+    const [track] = stream.getVideoTracks();
+    if (!track) throw new Error('Este dispositivo no tiene cámara');
+    return track;
+  } catch (err) {
+    rtcWarn('no se pudo abrir la cámara', err);
+    throw new Error(mediaErrorMessage(err, 'cámara'));
+  }
+}
+
+/** ¿Hay más de una cámara? Habilita el botón de cambiar de cámara. */
+export async function hasMultipleCameras() {
+  if (!navigator.mediaDevices?.enumerateDevices) return false;
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices.filter((device) => device.kind === 'videoinput').length > 1;
+  } catch {
+    return false;
+  }
+}
+
+export function screenSharingSupported() {
+  return typeof navigator.mediaDevices?.getDisplayMedia === 'function';
+}
+
+/** Cancelar el diálogo del navegador lanza este error y no se reporta. */
+export class ScreenShareCancelled extends Error {
+  constructor() {
+    super('Compartir pantalla cancelado');
+    this.name = 'ScreenShareCancelled';
   }
 }
 
 export async function requestScreen(): Promise<MediaStream> {
-  const devices = navigator.mediaDevices as MediaDevices & {
-    getDisplayMedia?: (constraints: DisplayMediaStreamOptions) => Promise<MediaStream>;
-  };
-  if (!devices.getDisplayMedia) throw new Error('Este navegador no permite compartir pantalla');
-  return devices.getDisplayMedia({ video: true, audio: false });
+  if (!screenSharingSupported()) throw new Error('Este navegador no permite compartir pantalla');
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+    rtcLog('captura de pantalla concedida');
+    return stream;
+  } catch (err) {
+    const name = err instanceof Error ? err.name : '';
+    if (name === 'NotAllowedError' || name === 'AbortError') throw new ScreenShareCancelled();
+    rtcWarn('getDisplayMedia falló', err);
+    throw new Error('No se pudo compartir la pantalla');
+  }
 }

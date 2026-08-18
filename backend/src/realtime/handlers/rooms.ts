@@ -77,11 +77,14 @@ export function registerRoomHandlers(socket: KyroSocket) {
       const members = await roomMemberIds(payload.scope.id);
       if (!members.includes(userId) || !members.includes(payload.to)) return;
     } else {
-      const participant = await prisma.callParticipant.findFirst({
+      // Los dos tienen que estar en la llamada: con `findFirst` bastaba con que
+      // lo estuviera uno, y eso permitía señalizar hacia una llamada ajena.
+      const participants = await prisma.callParticipant.findMany({
         where: { callId: payload.scope.id, userId: { in: [userId, payload.to] } },
-        select: { id: true },
+        select: { userId: true },
       });
-      if (!participant) return;
+      const ids = new Set(participants.map((participant) => participant.userId));
+      if (!ids.has(userId) || !ids.has(payload.to)) return;
     }
 
     emitToUsers([payload.to], 'rtc:signal', { ...payload, from: userId });

@@ -72,6 +72,11 @@ presencia, las salas de voz y todos los eventos viajan por Redis pub/sub.
 
 **El frontend en Vercel.** El repositorio ya trae `vercel.json`: Vercel compila
 `shared` y `frontend` y publica `frontend/dist` como aplicación de una sola página.
+
+Importa el repo **desde la raíz**, no desde `/frontend` ni `/backend`. En el asistente:
+preset **Other** (no Services), Root Directory vacío. Si eliges una subcarpeta, npm
+responde `No workspaces found` y el botón de deploy se queda bloqueado o el build falla.
+
 Solo hay que añadir una variable de entorno en el proyecto:
 
 ```env

@@ -1,13 +1,16 @@
 import { create } from 'zustand';
 import type { RTCIceServerConfig, RoomJoinAck, RoomParticipant, RtcSignalPayload } from '@kyro/shared';
 import { getSocket } from '@/lib/socket';
-import { PeerMesh, requestMedia, requestScreen } from '@/webrtc/mesh';
+import { PeerMesh, ScreenShareCancelled, requestMedia, requestScreen } from '@/webrtc/mesh';
 import { useCommunities } from './communities';
 import { toastError } from './ui';
 
 /**
  * Salas de voz de comunidad. Comparte la malla WebRTC con las llamadas
  * privadas: la diferencia es que aquí se entra y se sale libremente.
+ *
+ * La pista de pantalla se guarda aparte del stream de micrófono y viaja por el
+ * sender de vídeo que la malla reserva al crear cada conexión.
  */
 interface VoiceState {
   roomId: string | null;
@@ -16,7 +19,10 @@ interface VoiceState {
   joining: boolean;
   participants: RoomParticipant[];
   localStream: MediaStream | null;
+  screenTrack: MediaStreamTrack | null;
   remoteStreams: Record<string, MediaStream>;
+  /** Quién está enviando vídeo (una pantalla compartida) ahora mismo. */
+  remoteVideo: Record<string, boolean>;
   micMuted: boolean;
   deafened: boolean;
   sharingScreen: boolean;
@@ -44,7 +50,9 @@ export const useVoice = create<VoiceState>((set, get) => ({
   joining: false,
   participants: [],
   localStream: null,
+  screenTrack: null,
   remoteStreams: {},
+  remoteVideo: {},
   micMuted: false,
   deafened: false,
   sharingScreen: false,
@@ -83,9 +91,13 @@ export const useVoice = create<VoiceState>((set, get) => ({
         onRemoteStream: (userId, remote) => {
           set({ remoteStreams: { ...get().remoteStreams, [userId]: remote } });
         },
+        onRemoteVideo: (userId, hasVideo) => {
+          set({ remoteVideo: { ...get().remoteVideo, [userId]: hasVideo } });
+        },
         onPeerClosed: (userId) => {
-          const { [userId]: _gone, ...rest } = get().remoteStreams;
-          set({ remoteStreams: rest });
+          const { [userId]: _stream, ...streams } = get().remoteStreams;
+          const { [userId]: _video, ...video } = get().remoteVideo;
+          set({ remoteStreams: streams, remoteVideo: video });
         },
       });
       mesh.setLocalStream(stream);
@@ -115,13 +127,16 @@ export const useVoice = create<VoiceState>((set, get) => ({
     get().mesh?.close();
     const stream = get().localStream;
     if (stream) stopStream(stream);
+    get().screenTrack?.stop();
     set({
       roomId: null,
       roomName: null,
       communityId: null,
       participants: [],
       localStream: null,
+      screenTrack: null,
       remoteStreams: {},
+      remoteVideo: {},
       mesh: null,
       micMuted: false,
       deafened: false,
@@ -153,17 +168,17 @@ export const useVoice = create<VoiceState>((set, get) => ({
   async toggleScreen() {
     const roomId = get().roomId;
     const mesh = get().mesh;
-    const stream = get().localStream;
-    if (!roomId || !mesh || !stream) return;
+    if (!roomId || !mesh) return;
+
+    const stopSharing = () => {
+      get().screenTrack?.stop();
+      mesh.setVideoTrack(null);
+      set({ screenTrack: null, sharingScreen: false });
+      getSocket()?.emit('room:state-set', { roomId, sharingScreen: false });
+    };
 
     if (get().sharingScreen) {
-      for (const track of stream.getVideoTracks()) {
-        track.stop();
-        stream.removeTrack(track);
-      }
-      mesh.replaceTrack(null, 'video');
-      set({ sharingScreen: false });
-      getSocket()?.emit('room:state-set', { roomId, sharingScreen: false });
+      stopSharing();
       return;
     }
 
@@ -171,18 +186,18 @@ export const useVoice = create<VoiceState>((set, get) => ({
       const display = await requestScreen();
       const [track] = display.getVideoTracks();
       if (!track) return;
-      stream.addTrack(track);
-      mesh.setLocalStream(stream);
-      track.onended = () => {
-        stream.removeTrack(track);
-        mesh.replaceTrack(null, 'video');
-        set({ sharingScreen: false });
-        getSocket()?.emit('room:state-set', { roomId, sharingScreen: false });
-      };
-      set({ sharingScreen: true });
+
+      track.addEventListener('ended', () => {
+        if (get().screenTrack !== track) return;
+        stopSharing();
+      });
+
+      set({ screenTrack: track, sharingScreen: true });
+      mesh.setVideoTrack(track);
       getSocket()?.emit('room:state-set', { roomId, sharingScreen: true });
-    } catch {
-      // El usuario canceló el diálogo del navegador.
+    } catch (err) {
+      if (err instanceof ScreenShareCancelled) return;
+      toastError(err, 'No se pudo compartir la pantalla');
     }
   },
 
