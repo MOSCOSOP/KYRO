@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowDown, Hash, MessageCircle } from 'lucide-react';
-import type { Conversation } from '@kyro/shared';
+import type { Conversation, Message } from '@kyro/shared';
 import { conversationName, isGrouped, isSameDay } from '@/lib/conversation';
 import { dayLabel } from '@/lib/format';
 import { activeTypists, useChat } from '@/store/chat';
@@ -10,7 +10,13 @@ import { Loading, Spinner } from '@/components/ui/Feedback';
 import { MessageItem } from './MessageItem';
 import styles from './MessageList.module.css';
 
-export function MessageList({ conversation }: { conversation: Conversation }) {
+export function MessageList({
+  conversation,
+  onForward,
+}: {
+  conversation: Conversation;
+  onForward?: (message: Message) => void;
+}) {
   const selfId = useSession((state) => state.user?.id ?? '');
   const thread = useChat((state) => state.threads[conversation.id]);
   const typing = useChat((state) => state.typing[conversation.id]);
@@ -102,6 +108,7 @@ export function MessageList({ conversation }: { conversation: Conversation }) {
                 grouped={!newDay && isGrouped(previous, message)}
                 highlighted={highlighted === message.id}
                 onJumpTo={jumpTo}
+                onForward={onForward}
               />
             </div>
           );

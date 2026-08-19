@@ -44,6 +44,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const avatarRef = useRef<HTMLButtonElement>(null);
   const modal = useUI((state) => state.modal);
   const openModal = useUI((state) => state.openModal);
+  const openProfile = useUI((state) => state.openProfile);
+  const compact = useIsCompact();
   const closeModal = useUI((state) => state.closeModal);
 
   const unreadMessages = useMemo(
@@ -70,21 +72,26 @@ export function AppShell({ children }: { children: ReactNode }) {
           icon={<Bell size={19} />}
           badge={unreadNotifications}
         />
-        <NavItem to="/llamadas" label="Llamadas" icon={<Phone size={19} />} />
+        {/*
+          En una barra inferior no caben siete destinos con su nombre. En
+          pantallas estrechas se queda lo que se usa a diario y el resto vive en
+          el menú del avatar, que sigue a un toque de distancia.
+        */}
+        <NavItem to="/llamadas" label="Llamadas" icon={<Phone size={19} />} desktopOnly />
 
         <span className={styles.navSpacer} />
 
         <div className={styles.navFooter}>
           <button
             type="button"
-            className={styles.navItem}
+            className={clsx(styles.navItem, styles.desktopOnly)}
             onClick={openSearch}
             aria-label="Buscar en KYRO"
             title="Buscar (Ctrl+K)"
           >
             <Search size={19} />
           </button>
-          <NavItem to="/ajustes" label="Ajustes" icon={<Settings size={19} />} />
+          <NavItem to="/ajustes" label="Ajustes" icon={<Settings size={19} />} desktopOnly />
           {user ? (
             <button
               ref={avatarRef}
@@ -129,12 +136,47 @@ export function AppShell({ children }: { children: ReactNode }) {
           <MenuItem
             icon={<User size={16} />}
             onSelect={() => {
-              navigate(`/u/${user.username}`);
+              openProfile(user.username);
               menu.close();
             }}
           >
             Ver mi perfil
           </MenuItem>
+
+          {/* En móvil estos no caben en la barra inferior: su sitio es este. */}
+          {compact ? (
+            <>
+              <MenuSeparator />
+              <MenuItem
+                icon={<Search size={16} />}
+                onSelect={() => {
+                  openSearch();
+                  menu.close();
+                }}
+              >
+                Buscar
+              </MenuItem>
+              <MenuItem
+                icon={<Phone size={16} />}
+                onSelect={() => {
+                  navigate('/llamadas');
+                  menu.close();
+                }}
+              >
+                Llamadas
+              </MenuItem>
+              <MenuItem
+                icon={<Settings size={16} />}
+                onSelect={() => {
+                  navigate('/ajustes');
+                  menu.close();
+                }}
+              >
+                Ajustes
+              </MenuItem>
+            </>
+          ) : null}
+
           <MenuSeparator />
           <MenuItem
             icon={<LogOut size={16} />}
@@ -162,18 +204,23 @@ function NavItem({
   icon,
   badge = 0,
   end,
+  desktopOnly,
 }: {
   to: string;
   label: string;
   icon: ReactNode;
   badge?: number;
   end?: boolean;
+  /** Se oculta en la barra inferior; vive en el menú del avatar. */
+  desktopOnly?: boolean;
 }) {
   return (
     <NavLink
       to={to}
       end={end}
-      className={({ isActive }) => clsx(styles.navItem, isActive && styles.navItemActive)}
+      className={({ isActive }) =>
+        clsx(styles.navItem, isActive && styles.navItemActive, desktopOnly && styles.desktopOnly)
+      }
       title={`${label} ${brand.titleSeparator} ${brand.name}`}
     >
       {icon}

@@ -201,3 +201,35 @@
     display: none;
   }
 }
+
+/*
+ * Elementos que solo tienen sitio en el carril lateral. En la barra inferior
+ * caben cinco destinos con su nombre; el resto se alcanza desde el avatar.
+ */
+@media (max-width: 900px) {
+  .desktopOnly {
+    display: none;
+  }
+
+  /* Los cinco que quedan se reparten el ancho sin pisarse. */
+  .navItem {
+    flex: 1;
+    min-width: 0;
+    max-width: 92px;
+    gap: 4px;
+    font-size: 10px;
+  }
+
+  .navItem span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .navFooter {
+    flex: 1;
+    max-width: 92px;
+    justify-content: center;
+  }
+}

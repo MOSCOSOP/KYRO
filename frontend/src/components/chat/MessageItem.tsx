@@ -6,6 +6,7 @@ import {
   Check,
   CheckCheck,
   Copy,
+  Forward,
   MoreHorizontal,
   Pencil,
   Phone,
@@ -24,6 +25,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { IconButton } from '@/components/ui/Button';
 import { Menu, MenuItem, MenuSeparator, useMenu } from '@/components/ui/Menu';
 import { Textarea } from '@/components/ui/Field';
+import { useLongPress } from '@/hooks/useLongPress';
 import { Attachments } from './Attachments';
 import styles from './MessageItem.module.css';
 
@@ -36,6 +38,7 @@ interface MessageItemProps {
   grouped: boolean;
   highlighted?: boolean;
   onJumpTo?: (messageId: string) => void;
+  onForward?: (message: Message) => void;
 }
 
 export const MessageItem = memo(function MessageItem({
@@ -45,6 +48,7 @@ export const MessageItem = memo(function MessageItem({
   grouped,
   highlighted,
   onJumpTo,
+  onForward,
 }: MessageItemProps) {
   const menu = useMenu();
   const moreRef = useRef<HTMLButtonElement>(null);
@@ -53,6 +57,11 @@ export const MessageItem = memo(function MessageItem({
   const chat = useChat.getState();
   const confirm = useUI((state) => state.confirm);
   const openProfile = useUI((state) => state.openProfile);
+
+  // En táctil, mantener pulsado abre el mismo menú que el botón derecho.
+  const longPress = useLongPress((point) =>
+    menu.openAt({ ...point, preventDefault: () => undefined }),
+  );
 
   const editing = editingId === message.id;
   const mine = message.author?.id === selfId;
@@ -128,6 +137,7 @@ export const MessageItem = memo(function MessageItem({
         mentionsMe && !mine && styles.mentioned,
       )}
       onContextMenu={menu.openAt}
+      {...longPress}
       id={`msg-${message.id}`}
     >
       {grouped ? (
@@ -165,6 +175,11 @@ export const MessageItem = memo(function MessageItem({
               {message.author?.displayName ?? 'Alguien'}
             </button>
             <span className={styles.time}>{timeOf(message.createdAt)}</span>
+            {message.meta?.forwarded ? (
+              <span className={styles.badge}>
+                <Forward size={9} /> Reenviado
+              </span>
+            ) : null}
             {message.pinnedAt ? (
               <span className={styles.badge}>
                 <Pin size={9} /> Fijado
@@ -290,6 +305,15 @@ export const MessageItem = memo(function MessageItem({
             }}
           >
             Responder
+          </MenuItem>
+          <MenuItem
+            icon={<Forward size={16} />}
+            onSelect={() => {
+              onForward?.(message);
+              menu.close();
+            }}
+          >
+            Reenviar
           </MenuItem>
           <MenuItem
             icon={<Copy size={16} />}

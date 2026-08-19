@@ -10,6 +10,8 @@ import { conversationInclude, serializeConversation } from '../../serializers/co
 import { notify } from '../notifications/service.js';
 import { assertCanSend, requireAccess, type ConversationAccess } from '../conversations/access.js';
 import { verifyUploadToken } from '../uploads/tokens.js';
+import { storage } from '../../storage/index.js';
+import { logger } from '../../lib/logger.js';
 import { ROLE_RANK } from '@kyro/shared';
 
 /* --------------------------------- Lectura -------------------------------- */
@@ -390,11 +392,27 @@ export async function deleteMessage(messageId: string, userId: string) {
   }
 
   const deletedAt = new Date();
+  const attachments = await prisma.attachment.findMany({
+    where: { messageId },
+    select: { id: true, storageKey: true },
+  });
+
   await prisma.message.update({
     where: { id: messageId },
     data: { deletedAt, content: '', pinnedAt: null },
   });
   await prisma.attachment.deleteMany({ where: { messageId } });
+
+  // El archivo se borra del almacenamiento solo si ya no lo usa nadie: un
+  // mensaje reenviado comparte el objeto con el original.
+  for (const attachment of attachments) {
+    if (!attachment.storageKey) continue;
+    const others = await prisma.attachment.count({ where: { storageKey: attachment.storageKey } });
+    if (others > 0) continue;
+    await storage.delete(attachment.storageKey).catch((err) => {
+      logger.warn({ err, key: attachment.storageKey }, 'No se pudo borrar el archivo');
+    });
+  }
 
   emitToConversationMembers(row.conversationId, 'message:deleted', {
     conversationId: row.conversationId,
@@ -402,6 +420,81 @@ export async function deleteMessage(messageId: string, userId: string) {
     deletedAt: deletedAt.toISOString(),
   });
   return { id: messageId, deletedAt: deletedAt.toISOString() };
+}
+
+/**
+ * Reenvía un mensaje a otras conversaciones.
+ *
+ * Se copia el contenido y se clonan los adjuntos apuntando al mismo objeto
+ * almacenado: no se vuelve a subir nada. El borrado ya sabe que un archivo
+ * compartido no se elimina mientras quede alguien usándolo.
+ */
+export async function forwardMessage(
+  messageId: string,
+  userId: string,
+  conversationIds: string[],
+): Promise<Message[]> {
+  const source = await prisma.message.findUnique({
+    where: { id: messageId },
+    include: { attachments: true, author: { select: { displayName: true } } },
+  });
+  if (!source || source.deletedAt) throw notFound('Ese mensaje ya no existe');
+
+  await requireAccess(source.conversationId, userId);
+
+  const targets = [...new Set(conversationIds)].slice(0, 10);
+  if (targets.length === 0) throw badRequest('Elige a dónde reenviarlo');
+
+  const sent: Message[] = [];
+
+  for (const conversationId of targets) {
+    const access = await requireAccess(conversationId, userId);
+    assertCanSend(access);
+
+    const created = await prisma.message.create({
+      data: {
+        conversationId,
+        authorId: userId,
+        content: source.content,
+        type: 'text',
+        metaJson: JSON.stringify({
+          forwarded: true,
+          fromName: source.author?.displayName ?? null,
+        }),
+        attachments: {
+          create: source.attachments.map((attachment) => ({
+            conversationId,
+            uploaderId: attachment.uploaderId,
+            kind: attachment.kind,
+            url: attachment.url,
+            storageKey: attachment.storageKey,
+            name: attachment.name,
+            size: attachment.size,
+            mimeType: attachment.mimeType,
+            width: attachment.width,
+            height: attachment.height,
+            durationMs: attachment.durationMs,
+          })),
+        },
+      },
+      include: messageInclude,
+    });
+
+    await prisma.conversation.update({
+      where: { id: conversationId },
+      data: { lastMessageAt: created.createdAt },
+    });
+    await prisma.conversationMember.updateMany({
+      where: { conversationId, userId },
+      data: { lastReadAt: created.createdAt },
+    });
+
+    const message = serializeMessage(created, { viewerId: userId });
+    await fanOutMessage(created, message, access);
+    sent.push(message);
+  }
+
+  return sent;
 }
 
 export async function toggleReaction(messageId: string, userId: string, emoji: string) {

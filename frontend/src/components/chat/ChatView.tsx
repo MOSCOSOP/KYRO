@@ -31,6 +31,7 @@ import { Menu, MenuItem, MenuSeparator, useMenu } from '@/components/ui/Menu';
 import { useIsCompact } from '@/hooks/useMediaQuery';
 import { Composer } from './Composer';
 import { ConvertToGroupModal } from './ConvertToGroupModal';
+import { ForwardModal } from './ForwardModal';
 import { InfoPanel } from './InfoPanel';
 import { MessageList } from './MessageList';
 import styles from './ChatView.module.css';
@@ -51,6 +52,7 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
   const [pinned, setPinned] = useState<Message[]>([]);
+  const [forwarding, setForwarding] = useState<Message | null>(null);
 
   // Carga del hilo y suscripción en tiempo real.
   useEffect(() => {
@@ -169,16 +171,25 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
               </IconButton>
             </>
           ) : null}
-          <IconButton
-            label="Buscar en la conversación"
-            active={searchOpen}
-            onClick={() => setSearchOpen((open) => !open)}
-          >
-            <Search size={18} />
-          </IconButton>
-          <IconButton label="Detalles" active={infoOpen} onClick={() => setInfoOpen((open) => !open)}>
-            <Info size={18} />
-          </IconButton>
+          {/* En móvil el nombre necesita el sitio: estos dos pasan al menú. */}
+          {!compact ? (
+            <>
+              <IconButton
+                label="Buscar en la conversación"
+                active={searchOpen}
+                onClick={() => setSearchOpen((open) => !open)}
+              >
+                <Search size={18} />
+              </IconButton>
+              <IconButton
+                label="Detalles"
+                active={infoOpen}
+                onClick={() => setInfoOpen((open) => !open)}
+              >
+                <Info size={18} />
+              </IconButton>
+            </>
+          ) : null}
           <IconButton ref={moreRef} label="Más opciones" onClick={() => menu.openFrom(moreRef.current)}>
             <MoreVertical size={18} />
           </IconButton>
@@ -208,7 +219,7 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
 
       <div className={clsx(styles.body, infoOpen && !compact && styles.bodyWithPanel)}>
         <div className={styles.thread}>
-          <MessageList conversation={conversation} />
+          <MessageList conversation={conversation} onForward={setForwarding} />
           <Composer conversation={conversation} />
         </div>
         {infoOpen && !compact ? (
@@ -218,6 +229,29 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
 
       {menu.anchor ? (
         <Menu anchor={menu.anchor} onClose={menu.close} label="Opciones de la conversación">
+          {compact ? (
+            <>
+              <MenuItem
+                icon={<Search size={16} />}
+                onSelect={() => {
+                  setSearchOpen(true);
+                  menu.close();
+                }}
+              >
+                Buscar en la conversación
+              </MenuItem>
+              <MenuItem
+                icon={<Info size={16} />}
+                onSelect={() => {
+                  setInfoOpen(true);
+                  menu.close();
+                }}
+              >
+                Detalles
+              </MenuItem>
+              <MenuSeparator />
+            </>
+          ) : null}
           <MenuItem
             icon={<BellOff size={16} />}
             onSelect={() => {
@@ -275,6 +309,8 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
       {infoOpen && compact ? (
         <InfoPanel conversation={conversation} onClose={() => setInfoOpen(false)} />
       ) : null}
+
+      <ForwardModal message={forwarding} onClose={() => setForwarding(null)} />
 
       <ConvertToGroupModal
         conversation={conversation}

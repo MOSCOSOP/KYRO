@@ -66,3 +66,15 @@ messagesRouter.post(
     res.json(await service.toggleSaved(req.params.id, currentUserId(req)));
   }),
 );
+
+messagesRouter.post(
+  '/:id/forward',
+  writeLimiter,
+  validate(z.object({ conversationIds: z.array(z.string()).min(1).max(10) })),
+  handler(async (req, res) => {
+    const body = validated<{ conversationIds: string[] }>(req);
+    res.status(201).json({
+      items: await service.forwardMessage(req.params.id, currentUserId(req), body.conversationIds),
+    });
+  }),
+);
