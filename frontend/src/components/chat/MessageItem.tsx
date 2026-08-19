@@ -5,6 +5,7 @@ import {
   BookmarkCheck,
   Check,
   CheckCheck,
+  CheckSquare,
   Copy,
   Forward,
   MoreHorizontal,
@@ -57,6 +58,8 @@ export const MessageItem = memo(function MessageItem({
   const chat = useChat.getState();
   const confirm = useUI((state) => state.confirm);
   const openProfile = useUI((state) => state.openProfile);
+  const selecting = useChat((state) => state.selecting);
+  const selected = useChat((state) => state.selection.includes(message.id));
 
   // En táctil, mantener pulsado abre el mismo menú que el botón derecho.
   const longPress = useLongPress((point) =>
@@ -133,11 +136,14 @@ export const MessageItem = memo(function MessageItem({
       className={clsx(
         styles.row,
         !grouped && styles.rowFirst,
+        selecting && styles.selectable,
+        selected && styles.selected,
         highlighted && styles.highlight,
         mentionsMe && !mine && styles.mentioned,
       )}
       onContextMenu={menu.openAt}
       {...longPress}
+      onClick={selecting ? () => chat.toggleSelected(message.id) : undefined}
       id={`msg-${message.id}`}
     >
       {grouped ? (
@@ -247,7 +253,7 @@ export const MessageItem = memo(function MessageItem({
         ) : null}
       </div>
 
-      {!message.deletedAt && !editing ? (
+      {!message.deletedAt && !editing && !selecting ? (
         <div className={styles.hoverActions}>
           {QUICK_EMOJIS.slice(0, 3).map((emoji) => (
             <button
@@ -305,6 +311,15 @@ export const MessageItem = memo(function MessageItem({
             }}
           >
             Responder
+          </MenuItem>
+          <MenuItem
+            icon={<CheckSquare size={16} />}
+            onSelect={() => {
+              chat.startSelection(message.id);
+              menu.close();
+            }}
+          >
+            Seleccionar
           </MenuItem>
           <MenuItem
             icon={<Forward size={16} />}

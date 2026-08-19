@@ -19,10 +19,11 @@ import styles from './NewConversationModal.module.css';
  * ya subidos, así que da igual el tamaño del adjunto: no se sube nada otra vez.
  */
 export function ForwardModal({
-  message,
+  messages,
   onClose,
 }: {
-  message: Message | null;
+  /** Uno o varios: la selección múltiple reenvía en bloque. */
+  messages: Message[];
   onClose: () => void;
 }) {
   const selfId = useSession((state) => state.user?.id ?? '');
@@ -31,12 +32,14 @@ export function ForwardModal({
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
+  const message = messages[0] ?? null;
+
   useEffect(() => {
-    if (message) {
+    if (messages.length > 0) {
       setQuery('');
       setSelected([]);
     }
-  }, [message]);
+  }, [messages.length]);
 
   const options = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -54,9 +57,14 @@ export function ForwardModal({
     if (selected.length === 0) return;
     setBusy(true);
     try {
-      await api.post(`/messages/${message.id}/forward`, { conversationIds: selected });
+      // En orden, para que lleguen como estaban escritos.
+      for (const item of messages) {
+        await api.post(`/messages/${item.id}/forward`, { conversationIds: selected });
+      }
       toastOk(
-        selected.length === 1 ? 'Mensaje reenviado' : `Reenviado a ${selected.length} conversaciones`,
+        messages.length === 1
+          ? 'Mensaje reenviado'
+          : `${messages.length} mensajes reenviados`,
       );
       onClose();
     } catch (err) {
@@ -71,7 +79,13 @@ export function ForwardModal({
       open
       onClose={onClose}
       title="Reenviar"
-      description={message.content ? `«${message.content.slice(0, 80)}»` : 'Mensaje con archivos'}
+      description={
+        messages.length > 1
+          ? `${messages.length} mensajes`
+          : message.content
+            ? `«${message.content.slice(0, 80)}»`
+            : 'Mensaje con archivos'
+      }
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>

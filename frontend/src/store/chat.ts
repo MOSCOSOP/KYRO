@@ -63,6 +63,17 @@ interface ChatState {
   toggleSave: (messageId: string, conversationId: string) => Promise<void>;
   markRead: (id: string) => void;
 
+  /**
+   * Selección múltiple. Vive en el store porque la barra de acciones, la lista
+   * y cada mensaje necesitan verla, y porque debe sobrevivir a que un mensaje
+   * nuevo vuelva a pintar el hilo.
+   */
+  selection: string[];
+  selecting: boolean;
+  startSelection: (messageId: string) => void;
+  toggleSelected: (messageId: string) => void;
+  clearSelection: () => void;
+
   setDraft: (id: string, value: string) => void;
   setReplyTo: (id: string, message: Message | null) => void;
   setEditing: (id: string, messageId: string | null) => void;
@@ -275,6 +286,26 @@ export const useChat = create<ChatState>((set, get) => ({
     const socket = getSocket();
     if (socket?.connected) socket.emit('conversation:read', { conversationId: id });
     else void api.post(`/conversations/${id}/read`).catch(() => undefined);
+  },
+
+  selection: [],
+  selecting: false,
+
+  startSelection(messageId) {
+    set({ selecting: true, selection: [messageId] });
+  },
+
+  toggleSelected(messageId) {
+    const current = get().selection;
+    const next = current.includes(messageId)
+      ? current.filter((id) => id !== messageId)
+      : [...current, messageId];
+    // Al deseleccionar el último se sale del modo: no hay que pulsar «cancelar».
+    set({ selection: next, selecting: next.length > 0 });
+  },
+
+  clearSelection() {
+    set({ selection: [], selecting: false });
   },
 
   setDraft(id, value) {

@@ -1,5 +1,12 @@
 import { useEffect } from 'react';
+import type { Conversation, Message, UserPreferences } from '@kyro/shared';
 import { connectSocket } from '@/lib/socket';
+import {
+  playMessageTone,
+  showSystemNotification,
+  startRingtone,
+  stopRingtone,
+} from '@/lib/alerts';
 import { useChat } from '@/store/chat';
 import { useCalls } from '@/store/calls';
 import { useCommunities } from '@/store/communities';
@@ -8,6 +15,53 @@ import { usePresence } from '@/store/presence';
 import { useSession } from '@/store/session';
 import { useUI } from '@/store/ui';
 import { useVoice } from '@/store/voice';
+
+/**
+ * ¿Quiere el usuario que le avisemos de esto?
+ *
+ * En «No molestar» la respuesta es siempre no: es lo que significa. El resto lo
+ * deciden sus preferencias.
+ */
+function wants(kind: keyof UserPreferences['notifications']) {
+  const user = useSession.getState().user;
+  if (!user) return false;
+  if (user.status === 'dnd') return false;
+  if (!user.preferences.notifications.sounds && kind !== 'system') return false;
+  return user.preferences.notifications[kind];
+}
+
+/**
+ * Sonido y aviso del sistema para un mensaje que llega. Nunca por lo que uno
+ * mismo escribe, ni en una conversación silenciada, ni en la que se está
+ * mirando ahora.
+ */
+function alertForMessage(message: Message, conversation: Conversation, selfId: string) {
+  if (message.author?.id === selfId) return;
+
+  const chat = useChat.getState();
+  if (chat.activeId === message.conversationId && !document.hidden) return;
+
+  const known = chat.conversations.find((item) => item.id === message.conversationId);
+  if (known?.muted) return;
+
+  const mentionsMe = message.mentions.includes(selfId);
+  const kind = mentionsMe ? 'mentions' : conversation.type === 'channel' ? 'communities' : 'messages';
+  if (!wants(kind)) return;
+
+  playMessageTone();
+
+  const user = useSession.getState().user;
+  if (!user?.preferences.notifications.system) return;
+
+  showSystemNotification({
+    title: message.author?.displayName ?? 'Mensaje nuevo',
+    body: message.content || 'Te ha enviado un archivo',
+    tag: `conversation-${message.conversationId}`,
+    onClick: () => {
+      window.location.href = `/mensajes/${message.conversationId}`;
+    },
+  });
+}
 
 /**
  * Único punto donde los eventos del servidor entran en la aplicación.
@@ -22,6 +76,7 @@ export function useRealtime() {
 
     socket.on('message:new', ({ message, conversation }) => {
       useChat.getState().applyIncoming(message, conversation, userId);
+      alertForMessage(message, conversation, userId);
     });
 
     socket.on('message:updated', ({ message }) => {
@@ -96,13 +151,24 @@ export function useRealtime() {
 
     socket.on('call:incoming', ({ call }) => {
       useCalls.getState().applyIncoming(call, userId);
+      if (call.initiator.id === userId) return;
+
+      if (wants('calls')) startRingtone();
+      showSystemNotification({
+        title: call.kind === 'video' ? 'Videollamada entrante' : 'Llamada entrante',
+        body: call.initiator.displayName,
+        tag: `call-${call.id}`,
+      });
     });
 
     socket.on('call:updated', ({ call }) => {
+      // Si la llamada ya no está sonando, el timbre sobra.
+      stopRingtone();
       useCalls.getState().applyUpdated(call, userId);
     });
 
     socket.on('call:ended', ({ callId }) => {
+      stopRingtone();
       useCalls.getState().applyEnded(callId);
     });
 

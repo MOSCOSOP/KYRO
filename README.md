@@ -244,16 +244,26 @@ Producto: estados de carga y esqueletos, estados vacíos, errores comprensibles,
 confirmaciones para lo irreversible, avisos, aviso de reconexión, paginación e
 scroll infinito, imágenes diferidas, atajos de teclado y navegación accesible.
 
+Identidad y producto: paleta de comandos con acciones (`Ctrl/⌘ + K`), perfil
+flotante desde cualquier persona, presencia por contexto («en una llamada» la
+publica el servidor), conexión rápida escribiendo `@usuario`, modo llamada con
+controles que se apartan solos e indicador de quién habla, privacidad aplicada
+en el servidor, avisos del sistema y sonido, dos profundidades de tema, y PWA
+instalable.
+
 ## Qué está preparado pero todavía no implementado
 
 Se dice claramente en lugar de simularlo:
 
-- **Notificaciones push del navegador y sonidos.** Las notificaciones existen dentro de
-  la aplicación (con sus preferencias por tipo); el aviso del sistema operativo no.
 - **Bots e integraciones.** No hay API pública ni webhooks todavía.
-- **Grabación de llamadas y SFU.** La malla WebRTC sirve para grupos pequeños.
-- **Aplicaciones de escritorio y móvil.** Por ahora es web; la interfaz ya se adapta de
-  320 px a 4K y la arquitectura está separada para empaquetarla más adelante.
+- **Grabación de llamadas y SFU.** La malla WebRTC sirve para grupos pequeños
+  (hasta unas ocho personas); por encima haría falta un servidor de mezcla.
+- **Mensajes cifrados de extremo a extremo.** Hoy el cifrado es en tránsito
+  (HTTPS/WSS): el servidor puede leer los mensajes, como en cualquier plataforma
+  que ofrezca búsqueda del historial.
+- **Aplicaciones de escritorio y móvil.** Por ahora es web instalable (PWA); la
+  interfaz se adapta de 320 px a 4K y la arquitectura está separada para
+  empaquetarla más adelante.
 - **Traducciones.** La interfaz está en español; los textos están centralizados en los
   componentes, sin librería de i18n aún.
 

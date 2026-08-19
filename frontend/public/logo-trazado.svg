@@ -1,9 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <!--
-    Icono de pestaña. El trazado completo del logotipo (logo-trazado.svg) es
-    negro sobre negro y a 16 px desaparece: aquí va la misma geometría con el
-    filo de luz azul→violeta, que sí se lee a ese tamaño.
-  -->
   <defs>
     <linearGradient id="ring" x1="12" y1="8" x2="52" y2="56" gradientUnits="userSpaceOnUse">
       <stop stop-color="#4c7dff" />

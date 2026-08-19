@@ -173,3 +173,22 @@
     --duration-slow: 0ms;
   }
 }
+
+/**
+ * Variante «suave»: el mismo KYRO un punto menos hondo, para pantallas muy
+ * brillantes o para quien prefiere menos contraste. Solo cambian las
+ * superficies y los bordes; la marca, el acento y el movimiento son idénticos.
+ */
+:root[data-theme='soft'] {
+  --bg-deep: #0b0e13;
+  --bg: #0f1218;
+  --surface: #161a21;
+  --surface-2: #1d222b;
+  --surface-3: #252c37;
+  --surface-hover: #212734;
+  --border: #262d39;
+  --border-strong: #37414f;
+
+  --glass: rgba(26, 30, 38, 0.76);
+  --glass-strong: rgba(18, 22, 28, 0.9);
+}

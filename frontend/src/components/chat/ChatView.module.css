@@ -152,3 +152,29 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Barra de selección: sustituye a la cabecera mientras hay mensajes marcados. */
+.selectionBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--header-height);
+  padding: 0 var(--space-3) 0 var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+  animation: kyro-fade-in var(--duration-fast) var(--ease);
+}
+
+.selectionCount {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-md);
+  font-weight: 500;
+}
+
+.selectionActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}

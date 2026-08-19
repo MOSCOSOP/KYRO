@@ -53,7 +53,10 @@ export interface UserPreferences {
     mentions: boolean;
     communities: boolean;
     calls: boolean;
+    /** Sonido de aviso en llamadas y mensajes. */
     sounds: boolean;
+    /** Avisos del navegador cuando KYRO no está en primer plano. */
+    system: boolean;
   };
   /**
    * Privacidad. Se aplica en el servidor, no solo en la interfaz: quien no
@@ -70,9 +73,13 @@ export interface UserPreferences {
     /** Si no, nadie ve tu «última vez». */
     showLastSeen: boolean;
   };
+  /** Profundidad del oscuro. La identidad no cambia, solo el fondo. */
+  theme: Theme;
   reducedMotion: boolean;
   enterToSend: boolean;
 }
+
+export type Theme = 'deep' | 'soft';
 
 /** Alcance de una preferencia de privacidad. */
 export type Audience = 'everyone' | 'contacts';

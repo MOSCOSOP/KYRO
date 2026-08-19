@@ -102,3 +102,36 @@
   place-items: center;
   padding: var(--space-4);
 }
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Separador de día: ordena la lista sin añadir cajas. */
+.dayLabel {
+  padding: var(--space-4) var(--space-1) var(--space-1);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-tertiary);
+}
+
+.dayLabel:first-child {
+  padding-top: 0;
+}
+
+@media (max-width: 640px) {
+  .header {
+    height: auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .headerActions {
+    justify-content: space-between;
+  }
+}

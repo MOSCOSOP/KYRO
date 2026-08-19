@@ -4,6 +4,8 @@ import clsx from 'clsx';
 import {
   ArrowLeft,
   BellOff,
+  Copy,
+  Forward,
   Hash,
   Info,
   Megaphone,
@@ -11,6 +13,7 @@ import {
   Phone,
   Pin,
   Search,
+  Trash2,
   Users,
   Video,
   X,
@@ -52,14 +55,19 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
   const [pinned, setPinned] = useState<Message[]>([]);
-  const [forwarding, setForwarding] = useState<Message | null>(null);
+  const [forwarding, setForwarding] = useState<Message[]>([]);
+  const selection = useChat((state) => state.selection);
 
   // Carga del hilo y suscripción en tiempo real.
   useEffect(() => {
     useChat.getState().setActive(conversation.id);
     void useChat.getState().loadMessages(conversation.id).catch(() => undefined);
     useChat.getState().markRead(conversation.id);
-    return () => useChat.getState().setActive(null);
+    useChat.getState().clearSelection();
+    return () => {
+      useChat.getState().setActive(null);
+      useChat.getState().clearSelection();
+    };
   }, [conversation.id]);
 
   useEffect(() => {
@@ -126,8 +134,71 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
     }
   };
 
+  /* Acciones en lote sobre lo seleccionado. */
+  const forwardSelection = () => {
+    const thread = useChat.getState().threads[conversation.id];
+    const picked = (thread?.messages ?? []).filter((message) => selection.includes(message.id));
+    if (picked.length > 0) setForwarding(picked);
+  };
+
+  const deleteSelection = async () => {
+    const ok = await confirm({
+      title:
+        selection.length === 1
+          ? '¿Eliminar el mensaje?'
+          : `¿Eliminar ${selection.length} mensajes?`,
+      description: 'Se eliminarán para todos los participantes.',
+      confirmLabel: 'Eliminar',
+      danger: true,
+    });
+    if (!ok) return;
+
+    const chat = useChat.getState();
+    for (const messageId of selection) {
+      await chat.deleteMessage(messageId, conversation.id).catch(() => undefined);
+    }
+    chat.clearSelection();
+  };
+
+  const copySelection = async () => {
+    const thread = useChat.getState().threads[conversation.id];
+    const text = (thread?.messages ?? [])
+      .filter((message) => selection.includes(message.id))
+      .map((message) => `${message.author?.displayName ?? ''}: ${message.content}`.trim())
+      .join('\n');
+
+    try {
+      await navigator.clipboard.writeText(text);
+      useChat.getState().clearSelection();
+    } catch {
+      toastError(new Error('No se pudo copiar'));
+    }
+  };
+
   return (
     <div className={styles.view}>
+      {selection.length > 0 ? (
+        <div className={styles.selectionBar}>
+          <IconButton label="Cancelar selección" onClick={() => useChat.getState().clearSelection()}>
+            <X size={18} />
+          </IconButton>
+          <span className={styles.selectionCount}>
+            {selection.length} {selection.length === 1 ? 'seleccionado' : 'seleccionados'}
+          </span>
+          <span className={styles.selectionActions}>
+            <IconButton label="Copiar" onClick={() => void copySelection()}>
+              <Copy size={18} />
+            </IconButton>
+            <IconButton label="Reenviar" onClick={forwardSelection}>
+              <Forward size={18} />
+            </IconButton>
+            <IconButton label="Eliminar" danger onClick={() => void deleteSelection()}>
+              <Trash2 size={18} />
+            </IconButton>
+          </span>
+        </div>
+      ) : null}
+
       <header className={styles.header}>
         <IconButton
           label="Volver"
@@ -219,7 +290,7 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
 
       <div className={clsx(styles.body, infoOpen && !compact && styles.bodyWithPanel)}>
         <div className={styles.thread}>
-          <MessageList conversation={conversation} onForward={setForwarding} />
+          <MessageList conversation={conversation} onForward={(message) => setForwarding([message])} />
           <Composer conversation={conversation} />
         </div>
         {infoOpen && !compact ? (
@@ -310,7 +381,13 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
         <InfoPanel conversation={conversation} onClose={() => setInfoOpen(false)} />
       ) : null}
 
-      <ForwardModal message={forwarding} onClose={() => setForwarding(null)} />
+      <ForwardModal
+        messages={forwarding}
+        onClose={() => {
+          setForwarding([]);
+          useChat.getState().clearSelection();
+        }}
+      />
 
       <ConvertToGroupModal
         conversation={conversation}

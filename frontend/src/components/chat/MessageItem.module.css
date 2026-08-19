@@ -292,3 +292,24 @@
 .receiptsRead {
   color: var(--accent);
 }
+
+/* -------------------------------- Selección -------------------------------- */
+
+/*
+ * En modo selección toda la fila es un objetivo: cursor de puntero, y el
+ * seleccionado se marca con fondo y un filo a la izquierda, no con una casilla
+ * que desplace el contenido.
+ */
+.selectable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.selected {
+  background: var(--accent-softer);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.selected:hover {
+  background: var(--accent-soft);
+}

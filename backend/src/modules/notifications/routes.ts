@@ -67,6 +67,25 @@ notificationsRouter.post(
   }),
 );
 
+/**
+ * Limpia el historial. Por defecto solo lo ya leído: lo pendiente no se borra
+ * por accidente al pulsar «limpiar».
+ */
+notificationsRouter.delete(
+  '/',
+  validate(z.object({ all: z.coerce.boolean().optional() }), 'query'),
+  handler(async (req, res) => {
+    const userId = currentUserId(req);
+    const query = validated<{ all?: boolean }>(req, 'query');
+
+    const result = await prisma.notification.deleteMany({
+      where: { userId, ...(query.all ? {} : { readAt: { not: null } }) },
+    });
+
+    res.json({ deleted: result.count, unreadCount: await countUnread(userId) });
+  }),
+);
+
 notificationsRouter.delete(
   '/:id',
   handler(async (req, res) => {

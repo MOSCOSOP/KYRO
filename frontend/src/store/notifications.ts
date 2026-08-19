@@ -15,6 +15,7 @@ interface NotificationsState {
   refreshCount: () => Promise<void>;
   markRead: (ids?: string[]) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  clearRead: () => Promise<void>;
   applyIncoming: (notification: AppNotification, unreadCount: number) => void;
   reset: () => void;
 }
@@ -91,6 +92,15 @@ export const useNotifications = create<NotificationsState>((set, get) => ({
     set({ items: get().items.filter((item) => item.id !== id) });
     await api.delete(`/notifications/${id}`);
     await get().refreshCount();
+  },
+
+  /** Limpia lo ya leído. Lo pendiente se queda: no se borra sin querer. */
+  async clearRead() {
+    const data = await api.delete<{ unreadCount: number }>('/notifications');
+    set({
+      items: get().items.filter((item) => !item.readAt),
+      unreadCount: data.unreadCount,
+    });
   },
 
   applyIncoming(notification, unreadCount) {

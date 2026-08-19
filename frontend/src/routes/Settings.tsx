@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { LIMITS, type Audience } from '@kyro/shared';
 import { api, uploadFile } from '@/lib/api';
+import { requestSystemPermission, systemPermission } from '@/lib/alerts';
 import { brand, pageTitle } from '@/config/brand';
 import {
   listDevices,
@@ -335,9 +336,77 @@ function NotificationsSection() {
         checked={notifications.sounds}
         onChange={(value) => toggle('sounds', value)}
         title="Sonidos"
-        hint="Aviso sonoro de las llamadas entrantes."
+        hint="Un tono corto al recibir un mensaje y timbre en las llamadas."
       />
+
+      <SystemNotifications
+        enabled={notifications.system}
+        onChange={(value) => toggle('system', value)}
+      />
+
+      <p className={styles.sessionMeta}>
+        En «No molestar» KYRO no suena ni avisa, sea cual sea esta configuración.
+      </p>
     </div>
+  );
+}
+
+/**
+ * Avisos del navegador. El interruptor no puede mentir: si el permiso está
+ * denegado, lo dice y explica dónde se cambia, en vez de quedarse encendido
+ * sin hacer nada.
+ */
+function SystemNotifications({
+  enabled,
+  onChange,
+}: {
+  enabled: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  const [permission, setPermission] = useState(systemPermission());
+
+  if (permission === 'unsupported') {
+    return (
+      <Switch
+        checked={false}
+        onChange={() => undefined}
+        disabled
+        title="Avisos del sistema"
+        hint="Este navegador no los admite."
+      />
+    );
+  }
+
+  if (permission === 'denied') {
+    return (
+      <Switch
+        checked={false}
+        onChange={() => undefined}
+        disabled
+        title="Avisos del sistema"
+        hint="Bloqueados en el navegador. Actívalos en los permisos del sitio."
+      />
+    );
+  }
+
+  return (
+    <Switch
+      checked={enabled && permission === 'granted'}
+      title="Avisos del sistema"
+      hint="Cuando KYRO no está en primer plano."
+      onChange={async (value) => {
+        if (!value) {
+          onChange(false);
+          return;
+        }
+        const result = await requestSystemPermission();
+        setPermission(result);
+        onChange(result === 'granted');
+        if (result === 'denied') {
+          toastError(new Error('El navegador ha bloqueado los avisos'));
+        }
+      }}
+    />
   );
 }
 
@@ -363,6 +432,25 @@ function AppearanceSection() {
 
   return (
     <>
+      <div className={styles.block}>
+        <SettingRow
+          title="Profundidad"
+          hint="El mismo KYRO, con el fondo más hondo o algo más suave."
+        >
+          <Segmented
+            label="Tema"
+            value={user.preferences.theme}
+            options={[
+              { value: 'deep', label: 'Profundo' },
+              { value: 'soft', label: 'Suave' },
+            ]}
+            onChange={(value) =>
+              void updateProfile({ preferences: { theme: value } }).catch((err) => toastError(err))
+            }
+          />
+        </SettingRow>
+      </div>
+
       <div className={styles.block}>
         <Switch
           checked={user.preferences.enterToSend}

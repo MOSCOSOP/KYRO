@@ -22,8 +22,16 @@ export const publicUserSelect = {
 export type UserRow = Pick<User, keyof typeof publicUserSelect & keyof User>;
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
-  notifications: { messages: true, mentions: true, communities: true, calls: true, sounds: true },
+  notifications: {
+    messages: true,
+    mentions: true,
+    communities: true,
+    calls: true,
+    sounds: true,
+    system: false,
+  },
   privacy: { messages: 'everyone', calls: 'everyone', showPresence: true, showLastSeen: true },
+  theme: 'deep',
   reducedMotion: false,
   enterToSend: true,
 };

@@ -38,7 +38,7 @@ export function App() {
   useRealtime();
   useShortcuts();
   useInitialData(Boolean(user));
-  useMotionPreference(user?.preferences.reducedMotion ?? false);
+  useAppearance(user?.preferences.reducedMotion ?? false, user?.preferences.theme ?? 'deep');
 
   if (status === 'loading') {
     return (
@@ -88,11 +88,19 @@ export function App() {
   );
 }
 
-/** La preferencia de movimiento del usuario se aplica a toda la interfaz. */
-function useMotionPreference(reduced: boolean) {
+/** Movimiento y tema se aplican en la raíz del documento, no por componente. */
+function useAppearance(reduced: boolean, theme: string) {
   useEffect(() => {
     document.documentElement.dataset.reducedMotion = reduced ? 'true' : 'false';
   }, [reduced]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    // La barra del navegador acompaña al fondo elegido.
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'soft' ? '#0F1218' : '#080A0E');
+  }, [theme]);
 }
 
 /** Datos que la aplicación necesita nada más entrar. */

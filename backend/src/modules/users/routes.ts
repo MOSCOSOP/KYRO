@@ -43,6 +43,7 @@ const updateSchema = z.object({
           communities: z.boolean(),
           calls: z.boolean(),
           sounds: z.boolean(),
+          system: z.boolean(),
         })
         .partial()
         .optional(),
@@ -55,6 +56,7 @@ const updateSchema = z.object({
         })
         .partial()
         .optional(),
+      theme: z.enum(['deep', 'soft']).optional(),
       reducedMotion: z.boolean().optional(),
       enterToSend: z.boolean().optional(),
     })
