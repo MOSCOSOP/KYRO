@@ -1,5 +1,6 @@
 import type { Call, CallKind } from '@kyro/shared';
 import { prisma } from '../../lib/prisma.js';
+import { allowsFrom } from '../../lib/privacy.js';
 import { logger } from '../../lib/logger.js';
 import { badRequest, forbidden, notFound } from '../../lib/errors.js';
 import { callInclude, serializeCall } from '../../serializers/call.js';
@@ -69,6 +70,14 @@ export async function startCall(
 
   const members = await audienceOf(input.conversationId);
   if (members.length < 2) throw badRequest('Necesitas a alguien al otro lado para llamar');
+
+  // En un uno a uno, la otra persona decide quién puede llamarla.
+  if (access.conversation.type === 'direct') {
+    const other = members.find((memberId) => memberId !== userId);
+    if (other && !(await allowsFrom(other, userId, 'calls'))) {
+      throw forbidden('Esta persona solo acepta llamadas de sus contactos');
+    }
+  }
 
   // Si ya hay una llamada viva en esta conversación, el usuario se une a ella.
   const existing = await prisma.call.findFirst({

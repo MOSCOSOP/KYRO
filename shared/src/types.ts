@@ -55,9 +55,27 @@ export interface UserPreferences {
     calls: boolean;
     sounds: boolean;
   };
+  /**
+   * Privacidad. Se aplica en el servidor, no solo en la interfaz: quien no
+   * pueda escribirte no consigue abrir la conversación aunque lo intente por
+   * su cuenta.
+   */
+  privacy: {
+    /** Quién puede iniciar una conversación contigo. */
+    messages: Audience;
+    /** Quién puede llamarte. */
+    calls: Audience;
+    /** Si no, los demás te ven siempre como desconectado. */
+    showPresence: boolean;
+    /** Si no, nadie ve tu «última vez». */
+    showLastSeen: boolean;
+  };
   reducedMotion: boolean;
   enterToSend: boolean;
 }
+
+/** Alcance de una preferencia de privacidad. */
+export type Audience = 'everyone' | 'contacts';
 
 /* ---------------------------------- Contactos ------------------------------ */
 

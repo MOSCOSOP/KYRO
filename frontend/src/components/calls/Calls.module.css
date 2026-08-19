@@ -253,17 +253,37 @@
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * Los controles flotan sobre la llamada en lugar de robarle alto a la imagen.
+ * Tras unos segundos sin actividad se apartan; vuelven al mover el ratón o al
+ * tocar la pantalla.
+ */
 .controls {
+  position: absolute;
+  left: 50%;
+  bottom: max(var(--space-6), env(safe-area-inset-bottom));
+  transform: translateX(-50%);
   display: flex;
   justify-content: center;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-3);
-  padding: var(--space-5);
-  padding-bottom: max(var(--space-5), env(safe-area-inset-bottom));
-  border-top: 1px solid var(--border);
-  background: rgba(20, 23, 29, 0.85);
-  backdrop-filter: blur(12px);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-lg);
+  transition:
+    opacity var(--duration) var(--ease),
+    transform var(--duration) var(--ease);
+}
+
+.controlsHidden {
+  opacity: 0;
+  transform: translate(-50%, 14px);
+  pointer-events: none;
 }
 
 .control {
@@ -316,48 +336,153 @@
 
 /* ------------------------------ Llamada entrante --------------------------- */
 
+/* ----------------------------- Llamada entrante ---------------------------- */
+
+/*
+ * Una llamada entrante no es un aviso más: ocupa la pantalla. El fondo de la
+ * aplicación se difumina detrás, la persona aparece en grande y solo hay dos
+ * decisiones posibles.
+ */
 .incoming {
   position: fixed;
-  right: var(--space-4);
-  bottom: var(--space-4);
-  z-index: var(--z-toast);
-  width: min(340px, calc(100vw - var(--space-8)));
-  padding: var(--space-4);
-  border-radius: var(--radius-lg);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
+  inset: 0;
+  z-index: var(--z-modal);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  animation: kyro-rise var(--duration) var(--ease);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-5);
+  background: rgba(5, 6, 8, 0.82);
+  backdrop-filter: blur(22px) saturate(120%);
+  -webkit-backdrop-filter: blur(22px) saturate(120%);
+  animation: kyro-fade-in var(--duration) var(--ease);
+  overflow: hidden;
+}
+
+/* Dos anillos que salen del avatar al ritmo del timbre. */
+.incomingRings {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.incomingRings::before,
+.incomingRings::after {
+  content: '';
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--accent-border);
+  animation: ring-out 2.6s var(--ease) infinite;
+}
+
+.incomingRings::after {
+  animation-delay: 1.3s;
+}
+
+@keyframes ring-out {
+  from {
+    transform: scale(0.9);
+    opacity: 0.55;
+  }
+  to {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .incomingRings::before,
+  .incomingRings::after {
+    animation: none;
+    opacity: 0.2;
+  }
 }
 
 .incomingHead {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-4);
+  text-align: center;
+  z-index: 1;
 }
 
 .incomingText {
-  min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: var(--space-1);
 }
 
 .incomingName {
-  font-size: var(--text-md);
+  font-size: var(--text-2xl);
   font-weight: 600;
+  letter-spacing: var(--tracking-title);
 }
 
 .incomingMeta {
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   color: var(--text-secondary);
+}
+
+.incomingHandle {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
 }
 
 .incomingActions {
   display: flex;
+  align-items: center;
+  gap: var(--space-10);
+}
+
+/* Los dos botones grandes: el verde acepta, el rojo cuelga. */
+.bigAction {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: var(--space-2);
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.bigCircle {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  border-radius: var(--radius-full);
+  color: #fff;
+  transition:
+    transform var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+.bigAction:hover .bigCircle {
+  transform: translateY(-2px);
+}
+
+.bigAction:active .bigCircle {
+  transform: scale(0.95);
+}
+
+.acceptCircle {
+  background: var(--success);
+  box-shadow: 0 8px 30px rgba(63, 201, 140, 0.35);
+}
+
+.declineCircle {
+  background: var(--danger);
+  box-shadow: 0 8px 30px rgba(236, 96, 118, 0.3);
+}
+
+@media (max-width: 560px) {
+  .incomingActions {
+    gap: var(--space-8);
+  }
 }
 
 /* --------------------------------- Barra voz ------------------------------- */
@@ -451,4 +576,78 @@
     bottom: var(--space-3);
     width: clamp(96px, 30vw, 140px);
   }
+}
+
+/* ------------------------------- Modo llamada ------------------------------ */
+
+/*
+ * Anillo de quien está hablando. Se dibuja fuera del recuadro para que no
+ * mueva nada de sitio al aparecer.
+ */
+.speaking {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    var(--glow-accent);
+}
+
+.speakingDot {
+  color: var(--accent);
+}
+
+/* Cierre de la llamada: un resumen breve antes de devolver la aplicación. */
+.endCard {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  background: rgba(5, 6, 8, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: kyro-fade-in var(--duration-fast) var(--ease);
+}
+
+.endInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  animation: kyro-rise var(--duration) var(--ease);
+}
+
+.endTitle {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.endMeta {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* Cabecera del modo llamada: flota, no ocupa. */
+.callHeaderFloating {
+  position: absolute;
+  top: var(--space-5);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  transition:
+    opacity var(--duration) var(--ease),
+    transform var(--duration) var(--ease);
+}
+
+.headerHidden {
+  opacity: 0;
+  transform: translate(-50%, -10px);
+  pointer-events: none;
 }

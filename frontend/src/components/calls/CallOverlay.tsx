@@ -20,8 +20,8 @@ import {
 import type { PublicUser } from '@kyro/shared';
 import { useCalls, type CallPhase } from '@/store/calls';
 import { useSession } from '@/store/session';
+import { useIdle, useSpeaking } from '@/hooks/useSpeaking';
 import { Avatar } from '@/components/ui/Avatar';
-import { Button } from '@/components/ui/Button';
 import styles from './Calls.module.css';
 
 /** Llamada entrante + llamada en curso. Nada más aparece si no hay llamada. */
@@ -41,42 +41,95 @@ export function CallOverlay() {
   const connectedAt = useCalls((state) => state.connectedAt);
   const selfId = useSession((state) => state.user?.id ?? '');
 
+  /* Quién habla, y controles que se apartan cuando no los usas. */
+  const speaking = useSpeaking(remoteAudio);
+  const idle = useIdle(4000);
+
+  /* Al colgar, un cierre breve en vez de un corte seco. */
+  const [ended, setEnded] = useState<{ name: string; duration: string } | null>(null);
+  const lastCall = useRef<{ name: string; connectedAt: number | null } | null>(null);
+
+  useEffect(() => {
+    if (!call) return;
+    const others = call.participants.filter((participant) => participant.id !== selfId);
+    lastCall.current = {
+      name: others[0]?.displayName ?? call.initiator.displayName,
+      connectedAt,
+    };
+  }, [call, connectedAt, selfId]);
+
+  useEffect(() => {
+    if (phase !== 'idle' || !lastCall.current) return;
+    const info = lastCall.current;
+    lastCall.current = null;
+    setEnded({
+      name: info.name,
+      duration: info.connectedAt ? elapsed(Date.now() - info.connectedAt) : 'Sin conexión',
+    });
+    const timer = window.setTimeout(() => setEnded(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [phase]);
+
   if (phase === 'incoming' && incoming) {
     return createPortal(
       <div className={styles.incoming} role="alertdialog" aria-label="Llamada entrante">
         <div className={styles.incomingHead}>
-          <Avatar user={incoming.initiator} size="lg" />
+          <span className={styles.incomingRings}>
+            <Avatar user={incoming.initiator} size="xl" />
+          </span>
           <span className={styles.incomingText}>
             <span className={styles.incomingName}>{incoming.initiator.displayName}</span>
+            <span className={styles.incomingHandle}>@{incoming.initiator.username}</span>
             <span className={styles.incomingMeta}>
               {incoming.kind === 'video' ? 'Videollamada entrante' : 'Llamada entrante'}
             </span>
           </span>
         </div>
+
         <div className={styles.incomingActions}>
-          <Button
-            variant="primary"
-            block
-            icon={<Phone size={16} />}
-            onClick={() => void useCalls.getState().accept(selfId)}
-          >
-            Contestar
-          </Button>
-          <Button
-            variant="danger"
-            block
-            icon={<PhoneOff size={16} />}
+          <button
+            type="button"
+            className={styles.bigAction}
             onClick={() => useCalls.getState().decline()}
           >
+            <span className={clsx(styles.bigCircle, styles.declineCircle)}>
+              <PhoneOff size={24} />
+            </span>
             Rechazar
-          </Button>
+          </button>
+
+          <button
+            type="button"
+            className={styles.bigAction}
+            onClick={() => void useCalls.getState().accept(selfId)}
+            autoFocus
+          >
+            <span className={clsx(styles.bigCircle, styles.acceptCircle)}>
+              <Phone size={24} />
+            </span>
+            Contestar
+          </button>
         </div>
       </div>,
       document.body,
     );
   }
 
-  if (phase === 'idle' || !call) return null;
+  if (phase === 'idle' || !call) {
+    if (!ended) return null;
+    return createPortal(
+      <div className={styles.endCard} role="status">
+        <div className={styles.endInner}>
+          <PhoneOff size={22} color="var(--text-tertiary)" />
+          <span className={styles.endTitle}>Llamada finalizada</span>
+          <span className={styles.endMeta}>
+            {ended.name} · {ended.duration}
+          </span>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
 
   const others = call.participants.filter((participant) => participant.id !== selfId);
   const showLocalPreview = Boolean(localStream) && (cameraOn || screenOn);
@@ -85,7 +138,7 @@ export function CallOverlay() {
     <div className={styles.overlay} role="dialog" aria-label="Llamada en curso">
       <RemoteAudioLayer streams={remoteAudio} />
 
-      <header className={styles.callHeader}>
+      <header className={clsx(styles.callHeaderFloating, idle && styles.headerHidden)}>
         <span className={styles.callHeading}>
           <span className={styles.callTitle}>
             {others.length === 1 ? others[0].displayName : `Llamada · ${call.participants.length}`}
@@ -113,6 +166,7 @@ export function CallOverlay() {
               user={participant}
               stream={remoteStreams[participant.id]}
               hasVideo={Boolean(remoteVideo[participant.id])}
+              speaking={Boolean(speaking[participant.id])}
             />
           ))
         )}
@@ -122,7 +176,7 @@ export function CallOverlay() {
         ) : null}
       </div>
 
-      <div className={styles.controls}>
+      <div className={clsx(styles.controls, idle && styles.controlsHidden)}>
         <button
           type="button"
           className={clsx(styles.control, micMuted && styles.controlOff)}
@@ -183,6 +237,17 @@ export function CallOverlay() {
     </div>,
     document.body,
   );
+}
+
+/** mm:ss (o h:mm:ss) para la duración de una llamada. */
+function elapsed(ms: number) {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return hours > 0
+    ? `${hours}:${pad(minutes % 60)}:${pad(seconds % 60)}`
+    : `${minutes}:${pad(seconds % 60)}`;
 }
 
 const PHASE_TEXT: Record<CallPhase, string> = {
@@ -296,10 +361,12 @@ function RemoteTile({
   user,
   stream,
   hasVideo,
+  speaking,
 }: {
   user: PublicUser;
   stream?: MediaStream;
   hasVideo: boolean;
+  speaking: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -311,7 +378,7 @@ function RemoteTile({
   }, [stream]);
 
   return (
-    <div className={clsx(styles.tile, styles.tileRemote)}>
+    <div className={clsx(styles.tile, styles.tileRemote, speaking && styles.speaking)}>
       {/*
         Silenciado a propósito: el sonido sale del elemento de audio. Un vídeo
         silenciado además puede reproducirse siempre, sin permiso del usuario.
@@ -331,7 +398,10 @@ function RemoteTile({
           <span className={styles.callState}>{stream ? 'Solo audio' : 'Conectando…'}</span>
         </div>
       ) : null}
-      <span className={styles.tileLabel}>{user.displayName}</span>
+      <span className={styles.tileLabel}>
+        {speaking ? <Mic size={12} className={styles.speakingDot} /> : null}
+        {user.displayName}
+      </span>
     </div>
   );
 }

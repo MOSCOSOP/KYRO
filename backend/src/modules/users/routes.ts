@@ -46,6 +46,15 @@ const updateSchema = z.object({
         })
         .partial()
         .optional(),
+      privacy: z
+        .object({
+          messages: z.enum(['everyone', 'contacts']),
+          calls: z.enum(['everyone', 'contacts']),
+          showPresence: z.boolean(),
+          showLastSeen: z.boolean(),
+        })
+        .partial()
+        .optional(),
       reducedMotion: z.boolean().optional(),
       enterToSend: z.boolean().optional(),
     })

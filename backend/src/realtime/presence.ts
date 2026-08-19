@@ -1,6 +1,7 @@
 import type { PresenceStatus } from '@kyro/shared';
 import { PRESENCE_TTL_SECONDS } from '@kyro/shared';
 import { ephemeral } from '../lib/redis.js';
+import { hidesPresence } from '../lib/privacy.js';
 
 /**
  * Presencia en vivo.
@@ -87,10 +88,12 @@ export async function effectiveStatus(
 }
 
 export async function effectiveStatuses(
-  users: { id: string; status: string }[],
+  users: { id: string; status: string; preferencesJson?: string | null }[],
 ): Promise<Map<string, PresenceStatus>> {
   const entries = await Promise.all(
     users.map(async (user) => {
+      // Quien oculta su presencia aparece desconectado, esté o no conectado.
+      if (hidesPresence(user.preferencesJson)) return [user.id, 'offline' as PresenceStatus] as const;
       const status = await effectiveStatus(user.id, user.status as PresenceStatus);
       return [user.id, status] as const;
     }),

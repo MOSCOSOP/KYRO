@@ -84,6 +84,19 @@ export async function initRealtime(server: HttpServer) {
 
   io.on('connection', async (socket) => {
     const { userId } = socket.data;
+
+    /*
+     * Los manejadores se registran antes de cualquier espera. Socket.IO no
+     * guarda los eventos que llegan sin oyente: si el cliente emite nada más
+     * conectar —entrar en una sala, iniciar una llamada— y aquí todavía se
+     * estuviera consultando la base de datos, ese evento se perdería sin dejar
+     * rastro.
+     */
+    registerConversationHandlers(socket);
+    registerPresenceHandlers(socket);
+    registerRoomHandlers(socket);
+    registerCallHandlers(socket);
+
     await socket.join(userRoom(userId));
 
     const user = await prisma.user.findUnique({
@@ -94,11 +107,6 @@ export async function initRealtime(server: HttpServer) {
     await broadcastPresence(userId);
 
     socket.emit('connection:ready', { userId, serverTime: new Date().toISOString() });
-
-    registerConversationHandlers(socket);
-    registerPresenceHandlers(socket);
-    registerRoomHandlers(socket);
-    registerCallHandlers(socket);
 
     socket.on('disconnect', async (reason) => {
       try {

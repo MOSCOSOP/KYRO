@@ -67,6 +67,10 @@ model RefreshToken {
   expiresAt DateTime
   revokedAt DateTime?
   createdAt DateTime  @default(now())
+  // Token que sustituyó a este al rotar. Permite distinguir una carrera entre
+  // pestañas (dos refrescos a la vez) de la reutilización real de un token
+  // robado, que sí cierra todas las sesiones.
+  replacedById String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

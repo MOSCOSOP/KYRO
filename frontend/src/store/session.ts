@@ -38,22 +38,35 @@ interface SessionState {
   applyUser: (user: CurrentUser) => void;
 }
 
+/** Comprobación de sesión en vuelo, compartida por todas las llamadas. */
+let bootstrapping: Promise<void> | null = null;
+
 export const useSession = create<SessionState>((set, get) => ({
   user: null,
   status: 'loading',
   refreshTimer: null,
 
   async bootstrap() {
-    try {
-      // La cookie httpOnly decide si hay sesión: no guardamos nada en el
-      // navegador que un script pueda leer.
-      const session = await api.post<AuthResponse>('/auth/refresh', undefined, {
-        skipRefresh: true,
-      });
-      startSession(session, set, get);
-    } catch {
-      set({ user: null, status: 'anonymous' });
-    }
+    // Una sola comprobación de sesión aunque se llame dos veces (React en
+    // desarrollo monta dos veces): dos refrescos a la vez son una carrera.
+    if (bootstrapping) return bootstrapping;
+
+    bootstrapping = (async () => {
+      try {
+        // La cookie httpOnly decide si hay sesión: no guardamos nada en el
+        // navegador que un script pueda leer.
+        const session = await api.post<AuthResponse>('/auth/refresh', undefined, {
+          skipRefresh: true,
+        });
+        startSession(session, set, get);
+      } catch {
+        set({ user: null, status: 'anonymous' });
+      } finally {
+        bootstrapping = null;
+      }
+    })();
+
+    return bootstrapping;
   },
 
   async login(identifier, password) {

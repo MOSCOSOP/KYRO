@@ -37,13 +37,18 @@ export function accessTokenTtlSeconds(): number {
 const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
 
 /** Crea un refresh token opaco; en base de datos solo vive su hash. */
+/** Ventana en la que un token recién rotado sigue sirviendo (carreras entre pestañas). */
+const ROTATION_GRACE_MS = 30_000;
+
 export async function issueRefreshToken(
   userId: string,
   context: { userAgent?: string; ip?: string },
+  /** Token al que sustituye, para poder seguir la cadena de rotación. */
+  replacesId?: string,
 ) {
   const token = `${randomBytes(32).toString('base64url')}.${randomBytes(16).toString('base64url')}`;
   const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_TTL_DAYS * 86400_000);
-  await prisma.refreshToken.create({
+  const created = await prisma.refreshToken.create({
     data: {
       userId,
       tokenHash: hashToken(token),
@@ -52,7 +57,39 @@ export async function issueRefreshToken(
       expiresAt,
     },
   });
+
+  if (replacesId) {
+    await prisma.refreshToken.update({
+      where: { id: replacesId },
+      data: { replacedById: created.id },
+    });
+  }
+
   return { token, expiresAt };
+}
+
+/** Sigue la cadena de sustituciones hasta el token que aún está vivo. */
+async function activeReplacement(id: string) {
+  let current = id;
+
+  for (let hop = 0; hop < 5; hop++) {
+    const record = await prisma.refreshToken.findUnique({
+      where: { id: current },
+      select: { id: true, revokedAt: true, expiresAt: true, replacedById: true },
+    });
+    if (!record?.replacedById) return null;
+
+    const next = await prisma.refreshToken.findUnique({
+      where: { id: record.replacedById },
+      select: { id: true, revokedAt: true, expiresAt: true, replacedById: true },
+    });
+    if (!next) return null;
+    if (!next.revokedAt && next.expiresAt > new Date()) return next;
+
+    current = next.id;
+  }
+
+  return null;
 }
 
 /** Rotación: el token usado se revoca y se emite uno nuevo. */
@@ -65,14 +102,40 @@ export async function rotateRefreshToken(
     include: { user: true },
   });
 
-  if (!record || record.revokedAt || record.expiresAt < new Date()) {
-    // Reutilización de un token revocado: se cierran todas las sesiones.
-    if (record?.revokedAt) {
-      await prisma.refreshToken.updateMany({
-        where: { userId: record.userId, revokedAt: null },
+  if (!record || record.expiresAt < new Date()) {
+    throw unauthorized('La sesión expiró, vuelve a iniciar sesión');
+  }
+
+  if (record.revokedAt) {
+    /*
+     * Un token ya rotado puede significar dos cosas muy distintas:
+     *
+     * - Una carrera normal: dos pestañas (o dos recargas) refrescan a la vez y
+     *   la segunda llega con el token que la primera acaba de sustituir. Eso no
+     *   es un ataque, y cerrar todas las sesiones por ello echaría al usuario
+     *   de la aplicación constantemente.
+     * - Un token robado que se reutiliza más tarde. Ahí sí hay que cerrar todo.
+     *
+     * Se distinguen por el tiempo y por la cadena de sustitución: dentro de la
+     * ventana de gracia se continúa desde el token vigente; fuera de ella, se
+     * revoca la sesión entera.
+     */
+    const head = await activeReplacement(record.id);
+    const withinGrace = Date.now() - record.revokedAt.getTime() < ROTATION_GRACE_MS;
+
+    if (head && withinGrace) {
+      await prisma.refreshToken.update({
+        where: { id: head.id },
         data: { revokedAt: new Date() },
       });
+      const next = await issueRefreshToken(record.userId, context, head.id);
+      return { user: record.user, ...next };
     }
+
+    await prisma.refreshToken.updateMany({
+      where: { userId: record.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
     throw unauthorized('La sesión expiró, vuelve a iniciar sesión');
   }
 
@@ -81,7 +144,7 @@ export async function rotateRefreshToken(
     data: { revokedAt: new Date() },
   });
 
-  const next = await issueRefreshToken(record.userId, context);
+  const next = await issueRefreshToken(record.userId, context, record.id);
   return { user: record.user, ...next };
 }
 

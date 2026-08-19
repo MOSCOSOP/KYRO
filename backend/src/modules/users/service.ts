@@ -130,9 +130,14 @@ export async function updateProfile(userId: string, input: UpdateProfileInput) {
       where: { id: userId },
       select: { preferencesJson: true },
     });
+    // Mezcla en profundidad: cambiar una notificación o una regla de privacidad
+    // no debe borrar las demás.
+    const stored = parsePreferences(current?.preferencesJson ?? null);
     const merged = {
-      ...parsePreferences(current?.preferencesJson ?? null),
+      ...stored,
       ...input.preferences,
+      notifications: { ...stored.notifications, ...(input.preferences.notifications ?? {}) },
+      privacy: { ...stored.privacy, ...(input.preferences.privacy ?? {}) },
     };
     data.preferencesJson = JSON.stringify(merged);
   }

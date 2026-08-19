@@ -2,6 +2,7 @@ import type { Conversation } from '@kyro/shared';
 import { LIMITS, ROLE_RANK } from '@kyro/shared';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/errors.js';
 import { prisma } from '../../lib/prisma.js';
+import { allowsFrom } from '../../lib/privacy.js';
 import { sanitizeText } from '../../lib/text.js';
 import { emitToConversationMembers, emitToUsers } from '../../realtime/broadcast.js';
 import { conversationInclude, serializeConversation, serializeConversations } from '../../serializers/conversation.js';
@@ -76,6 +77,12 @@ export async function openDirectConversation(userId: string, otherUserId: string
     include: conversationInclude,
   });
   if (existing) return serializeConversation(existing, userId);
+
+  // Una conversación que ya existe se puede seguir abriendo; para empezar una
+  // nueva manda la privacidad de la otra persona.
+  if (!(await allowsFrom(otherUserId, userId, 'messages'))) {
+    throw forbidden('Esta persona solo acepta mensajes de sus contactos');
+  }
 
   const created = await prisma.conversation.create({
     data: {

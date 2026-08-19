@@ -1,8 +1,25 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
-import { Camera, LogOut, Monitor } from 'lucide-react';
-import { LIMITS } from '@kyro/shared';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import clsx from 'clsx';
+import {
+  ArrowLeft,
+  Bell,
+  Camera,
+  Headphones,
+  LogOut,
+  Monitor,
+  Palette,
+  Shield,
+  User,
+} from 'lucide-react';
+import { LIMITS, type Audience } from '@kyro/shared';
 import { api, uploadFile } from '@/lib/api';
 import { brand, pageTitle } from '@/config/brand';
+import {
+  listDevices,
+  getPreferredDevices,
+  setPreferredDevice,
+  type DeviceOption,
+} from '@/lib/devices';
 import { fullStamp } from '@/lib/format';
 import { useSession } from '@/store/session';
 import { toastError, toastOk, useUI } from '@/store/ui';
@@ -10,38 +27,82 @@ import { Workspace } from '@/components/layout/AppShell';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Field, Input, Switch, Textarea } from '@/components/ui/Field';
+import { Segmented, SettingRow } from '@/components/ui/Segmented';
+import { useIsCompact } from '@/hooks/useMediaQuery';
 import styles from './Settings.module.css';
 
-interface SessionInfo {
-  id: string;
-  userAgent: string | null;
-  createdAt: string;
-  lastUsedAt: string | null;
-  current?: boolean;
-}
+type Section = 'cuenta' | 'privacidad' | 'notificaciones' | 'apariencia' | 'medios' | 'seguridad';
+
+const SECTIONS: { id: Section; label: string; icon: ReactNode; hint: string }[] = [
+  { id: 'cuenta', label: 'Cuenta', icon: <User size={15} />, hint: 'Tu nombre, tu @usuario y tu foto.' },
+  { id: 'privacidad', label: 'Privacidad', icon: <Shield size={15} />, hint: 'Quién puede llegar hasta ti.' },
+  { id: 'notificaciones', label: 'Notificaciones', icon: <Bell size={15} />, hint: 'Qué merece interrumpirte.' },
+  { id: 'apariencia', label: 'Apariencia', icon: <Palette size={15} />, hint: 'Cómo se comporta la interfaz.' },
+  { id: 'medios', label: 'Audio y vídeo', icon: <Headphones size={15} />, hint: 'Micrófono y cámara de las llamadas.' },
+  { id: 'seguridad', label: 'Seguridad', icon: <Shield size={15} />, hint: 'Contraseña y sesiones abiertas.' },
+];
 
 export function SettingsPage() {
+  const [section, setSection] = useState<Section | null>(null);
+  const compact = useIsCompact();
+
   useEffect(() => {
     document.title = pageTitle('Ajustes');
   }, []);
 
+  // En pantallas anchas siempre hay una sección abierta.
+  const current = section ?? (compact ? null : 'cuenta');
+
   return (
-    <Workspace>
-      <div className={styles.page}>
-        <div className={styles.inner}>
-          <h1 className={styles.title}>Ajustes</h1>
-          <ProfileSection />
-          <NotificationsSection />
-          <SecuritySection />
-          <ShortcutsSection />
-          <AboutSection />
+    <Workspace
+      sidebar={
+        <nav className={styles.nav} aria-label="Secciones de ajustes">
+          <header className={styles.navHeader}>Ajustes</header>
+          <div className={styles.navList}>
+            {SECTIONS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={clsx(styles.navItem, current === item.id && styles.navItemActive)}
+                onClick={() => setSection(item.id)}
+              >
+                <span className={styles.navIcon}>{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </nav>
+      }
+      showContent={Boolean(current)}
+    >
+      {current ? (
+        <div className={styles.page}>
+          <div className={styles.inner} key={current}>
+            {compact ? (
+              <IconButton label="Volver a los ajustes" onClick={() => setSection(null)}>
+                <ArrowLeft size={18} />
+              </IconButton>
+            ) : null}
+
+            <h1 className={styles.title}>{SECTIONS.find((item) => item.id === current)?.label}</h1>
+            <p className={styles.lead}>{SECTIONS.find((item) => item.id === current)?.hint}</p>
+
+            {current === 'cuenta' ? <AccountSection /> : null}
+            {current === 'privacidad' ? <PrivacySection /> : null}
+            {current === 'notificaciones' ? <NotificationsSection /> : null}
+            {current === 'apariencia' ? <AppearanceSection /> : null}
+            {current === 'medios' ? <MediaSection /> : null}
+            {current === 'seguridad' ? <SecuritySection /> : null}
+          </div>
         </div>
-      </div>
+      ) : null}
     </Workspace>
   );
 }
 
-function ProfileSection() {
+/* --------------------------------- Cuenta ---------------------------------- */
+
+function AccountSection() {
   const user = useSession((state) => state.user);
   const updateProfile = useSession((state) => state.updateProfile);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -54,7 +115,9 @@ function ProfileSection() {
   if (!user) return null;
 
   const dirty =
-    displayName !== user.displayName || username !== user.username || (bio ?? '') !== (user.bio ?? '');
+    displayName !== user.displayName ||
+    username !== user.username ||
+    (bio ?? '') !== (user.bio ?? '');
 
   const save = async () => {
     setSaving(true);
@@ -87,72 +150,149 @@ function ProfileSection() {
   };
 
   return (
-    <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Tu perfil</h2>
-
-      <div className={styles.avatarRow}>
-        <Avatar user={user} size="xl" presence />
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button icon={<Camera size={16} />} loading={uploading} onClick={() => fileRef.current?.click()}>
-            Cambiar foto
-          </Button>
-          {user.avatarUrl ? (
-            <Button variant="ghost" onClick={() => void updateProfile({ avatarUrl: null })}>
-              Quitar
+    <>
+      <div className={styles.block}>
+        <div className={styles.avatarRow}>
+          <Avatar user={user} size="xl" presence />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button icon={<Camera size={16} />} loading={uploading} onClick={() => fileRef.current?.click()}>
+              Cambiar foto
             </Button>
-          ) : null}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif"
-            hidden
-            onChange={(event) => void changeAvatar(event.target.files?.[0])}
-          />
+            {user.avatarUrl ? (
+              <Button variant="ghost" onClick={() => void updateProfile({ avatarUrl: null })}>
+                Quitar
+              </Button>
+            ) : null}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              hidden
+              onChange={(event) => void changeAvatar(event.target.files?.[0])}
+            />
+          </div>
         </div>
       </div>
 
-      <Field label="Nombre">
-        {(id) => (
-          <Input
-            id={id}
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
-            maxLength={LIMITS.displayName.max}
-          />
-        )}
-      </Field>
+      <div className={styles.block}>
+        <Field label="Nombre">
+          {(id) => (
+            <Input
+              id={id}
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              maxLength={LIMITS.displayName.max}
+            />
+          )}
+        </Field>
 
-      <Field label="Nombre de usuario" hint="Así te encuentran los demás.">
-        {(id) => (
-          <Input
-            id={id}
-            value={username}
-            onChange={(event) => setUsername(event.target.value.toLowerCase())}
-            maxLength={LIMITS.username.max}
-          />
-        )}
-      </Field>
+        <Field label="@usuario" hint="Así te encuentran los demás.">
+          {(id) => (
+            <Input
+              id={id}
+              value={username}
+              onChange={(event) => setUsername(event.target.value.toLowerCase())}
+              maxLength={LIMITS.username.max}
+            />
+          )}
+        </Field>
 
-      <Field label="Sobre ti">
-        {(id) => (
-          <Textarea
-            id={id}
-            value={bio}
-            onChange={(event) => setBio(event.target.value)}
-            maxLength={LIMITS.bio.max}
-            placeholder="Una línea sobre ti."
-          />
-        )}
-      </Field>
+        <Field label="Sobre ti">
+          {(id) => (
+            <Textarea
+              id={id}
+              value={bio}
+              onChange={(event) => setBio(event.target.value)}
+              maxLength={LIMITS.bio.max}
+              placeholder="Una línea sobre ti."
+            />
+          )}
+        </Field>
 
-      <div className={styles.actions}>
-        <Button variant="primary" onClick={save} loading={saving} disabled={!dirty}>
-          Guardar cambios
-        </Button>
+        <div className={styles.actions}>
+          <Button variant="primary" onClick={save} loading={saving} disabled={!dirty}>
+            Guardar cambios
+          </Button>
+        </div>
       </div>
-    </section>
+
+      <p className={styles.sessionMeta}>{user.email}</p>
+    </>
   );
 }
+
+/* -------------------------------- Privacidad -------------------------------- */
+
+const AUDIENCE_OPTIONS: { value: Audience; label: string }[] = [
+  { value: 'everyone', label: 'Todos' },
+  { value: 'contacts', label: 'Solo contactos' },
+];
+
+function PrivacySection() {
+  const user = useSession((state) => state.user);
+  const updateProfile = useSession((state) => state.updateProfile);
+  if (!user) return null;
+
+  const privacy = user.preferences.privacy;
+
+  const change = (patch: Partial<typeof privacy>) => {
+    void updateProfile({ preferences: { privacy: { ...privacy, ...patch } } }).catch((err) =>
+      toastError(err, 'No se pudo guardar la preferencia'),
+    );
+  };
+
+  return (
+    <>
+      <div className={styles.block}>
+        <span className={styles.blockTitle}>Quién puede llegar hasta ti</span>
+
+        <SettingRow
+          title="Mensajes de personas nuevas"
+          hint="Las conversaciones que ya existen no se ven afectadas."
+        >
+          <Segmented
+            label="Quién puede escribirte"
+            value={privacy.messages}
+            options={AUDIENCE_OPTIONS}
+            onChange={(value) => change({ messages: value })}
+          />
+        </SettingRow>
+
+        <SettingRow title="Llamadas" hint="Quién puede llamarte directamente.">
+          <Segmented
+            label="Quién puede llamarte"
+            value={privacy.calls}
+            options={AUDIENCE_OPTIONS}
+            onChange={(value) => change({ calls: value })}
+          />
+        </SettingRow>
+      </div>
+
+      <div className={styles.block}>
+        <span className={styles.blockTitle}>Lo que los demás ven</span>
+
+        <Switch
+          checked={privacy.showPresence}
+          onChange={(value) => change({ showPresence: value })}
+          title="Mostrar mi presencia"
+          hint="Si lo desactivas, aparecerás siempre como desconectado."
+        />
+        <Switch
+          checked={privacy.showLastSeen}
+          onChange={(value) => change({ showLastSeen: value })}
+          title="Mostrar mi última conexión"
+        />
+      </div>
+
+      <p className={styles.sessionMeta}>
+        Estas reglas se aplican en el servidor: quien no pueda escribirte o llamarte no lo
+        conseguirá aunque lo intente por su cuenta.
+      </p>
+    </>
+  );
+}
+
+/* ------------------------------ Notificaciones ------------------------------ */
 
 function NotificationsSection() {
   const user = useSession((state) => state.user);
@@ -162,16 +302,13 @@ function NotificationsSection() {
   const notifications = user.preferences.notifications;
 
   const toggle = (key: keyof typeof notifications, value: boolean) => {
-    void updateProfile({
-      preferences: { notifications: { ...notifications, [key]: value } },
-    }).catch((err) => toastError(err, 'No se pudo guardar la preferencia'));
+    void updateProfile({ preferences: { notifications: { ...notifications, [key]: value } } }).catch(
+      (err) => toastError(err, 'No se pudo guardar la preferencia'),
+    );
   };
 
   return (
-    <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Notificaciones</h2>
-      <p className={styles.sectionHint}>Decide qué merece interrumpirte.</p>
-
+    <div className={styles.block}>
       <Switch
         checked={notifications.messages}
         onChange={(value) => toggle('messages', value)}
@@ -181,7 +318,7 @@ function NotificationsSection() {
         checked={notifications.mentions}
         onChange={(value) => toggle('mentions', value)}
         title="Menciones"
-        hint="Cuando alguien escribe @tu nombre."
+        hint="Cuando alguien escribe tu @usuario."
       />
       <Switch
         checked={notifications.communities}
@@ -194,17 +331,222 @@ function NotificationsSection() {
         onChange={(value) => toggle('calls', value)}
         title="Llamadas"
       />
-
       <Switch
-        checked={user.preferences.enterToSend}
-        onChange={(value) =>
-          void updateProfile({ preferences: { enterToSend: value } }).catch((err) => toastError(err))
-        }
-        title="Enviar con Enter"
-        hint="Si lo desactivas, Enter salta de línea y Ctrl+Enter envía."
+        checked={notifications.sounds}
+        onChange={(value) => toggle('sounds', value)}
+        title="Sonidos"
+        hint="Aviso sonoro de las llamadas entrantes."
       />
-    </section>
+    </div>
   );
+}
+
+/* -------------------------------- Apariencia -------------------------------- */
+
+function AppearanceSection() {
+  const user = useSession((state) => state.user);
+  const updateProfile = useSession((state) => state.updateProfile);
+  const modifier = navigator.platform.toLowerCase().includes('mac') ? '⌘' : 'Ctrl';
+
+  if (!user) return null;
+
+  const shortcuts: [string, string][] = [
+    ['Buscar y ejecutar acciones', `${modifier} + K`],
+    ['Ir a Inicio', `${modifier} + Shift + H`],
+    ['Ir a Mensajes', `${modifier} + Shift + M`],
+    ['Ir a Comunidades', `${modifier} + Shift + C`],
+    ['Ir a Actividad', `${modifier} + Shift + A`],
+    ['Ir a Llamadas', `${modifier} + Shift + L`],
+    ['Enviar mensaje', user.preferences.enterToSend ? 'Enter' : `${modifier} + Enter`],
+    ['Nueva línea', user.preferences.enterToSend ? 'Shift + Enter' : 'Enter'],
+  ];
+
+  return (
+    <>
+      <div className={styles.block}>
+        <Switch
+          checked={user.preferences.enterToSend}
+          onChange={(value) =>
+            void updateProfile({ preferences: { enterToSend: value } }).catch((err) =>
+              toastError(err),
+            )
+          }
+          title="Enviar con Enter"
+          hint="Si lo desactivas, Enter salta de línea y Ctrl+Enter envía."
+        />
+        <Switch
+          checked={user.preferences.reducedMotion}
+          onChange={(value) =>
+            void updateProfile({ preferences: { reducedMotion: value } }).catch((err) =>
+              toastError(err),
+            )
+          }
+          title="Reducir el movimiento"
+          hint="Quita las animaciones de entrada y las transiciones largas."
+        />
+      </div>
+
+      <div className={styles.block}>
+        <span className={styles.blockTitle}>Atajos</span>
+        <div className={styles.shortcuts}>
+          {shortcuts.map(([label, keys]) => (
+            <Fragment key={label}>
+              <span>{label}</span>
+              <span className={styles.key}>{keys}</span>
+            </Fragment>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.about}>
+        <span>
+          {brand.name} · {brand.tagline}
+        </span>
+        <span>{brand.idea}</span>
+      </div>
+    </>
+  );
+}
+
+/* ------------------------------ Audio y vídeo ------------------------------- */
+
+function MediaSection() {
+  const [devices, setDevices] = useState<{ audio: DeviceOption[]; video: DeviceOption[] }>({
+    audio: [],
+    video: [],
+  });
+  const [preferred, setPreferred] = useState(getPreferredDevices());
+  const [level, setLevel] = useState(0);
+  const [testing, setTesting] = useState(false);
+  const stopRef = useRef<(() => void) | null>(null);
+
+  const load = async () => {
+    try {
+      setDevices(await listDevices());
+    } catch {
+      setDevices({ audio: [], video: [] });
+    }
+  };
+
+  useEffect(() => {
+    void load();
+    return () => stopRef.current?.();
+  }, []);
+
+  const choose = (kind: 'audioInput' | 'videoInput', deviceId: string) => {
+    setPreferredDevice(kind, deviceId || null);
+    setPreferred(getPreferredDevices());
+  };
+
+  /** Prueba real: abre el micrófono elegido y mide lo que entra. */
+  const test = async () => {
+    if (testing) {
+      stopRef.current?.();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: preferred.audioInput ? { deviceId: { ideal: preferred.audioInput } } : true,
+      });
+      await load(); // Con permiso ya concedido, los nombres reales aparecen.
+
+      const context = new AudioContext();
+      const source = context.createMediaStreamSource(stream);
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+      const buffer = new Uint8Array(analyser.fftSize);
+
+      const timer = window.setInterval(() => {
+        analyser.getByteTimeDomainData(buffer);
+        let sum = 0;
+        for (const sample of buffer) {
+          const value = (sample - 128) / 128;
+          sum += value * value;
+        }
+        setLevel(Math.min(1, Math.sqrt(sum / buffer.length) * 6));
+      }, 80);
+
+      setTesting(true);
+      stopRef.current = () => {
+        window.clearInterval(timer);
+        source.disconnect();
+        void context.close().catch(() => undefined);
+        for (const track of stream.getTracks()) track.stop();
+        setTesting(false);
+        setLevel(0);
+        stopRef.current = null;
+      };
+    } catch (err) {
+      toastError(err, 'No se pudo abrir el micrófono');
+    }
+  };
+
+  return (
+    <>
+      <div className={styles.block}>
+        <SettingRow title="Micrófono" hint="Se usará en llamadas y salas de voz.">
+          <select
+            className={styles.select}
+            value={preferred.audioInput ?? ''}
+            onChange={(event) => choose('audioInput', event.target.value)}
+            aria-label="Micrófono"
+          >
+            <option value="">Predeterminado del sistema</option>
+            {devices.audio.map((device) => (
+              <option key={device.deviceId} value={device.deviceId}>
+                {device.label}
+              </option>
+            ))}
+          </select>
+        </SettingRow>
+
+        <SettingRow title="Nivel de entrada" hint="Habla para comprobar que se te oye.">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', maxWidth: 280 }}>
+            <div className={styles.meter}>
+              <span className={styles.meterFill} style={{ transform: `scaleX(${level})` }} />
+            </div>
+            <Button size="sm" onClick={test}>
+              {testing ? 'Parar' : 'Probar'}
+            </Button>
+          </div>
+        </SettingRow>
+      </div>
+
+      <div className={styles.block}>
+        <SettingRow title="Cámara" hint="La que se abre al activar vídeo.">
+          <select
+            className={styles.select}
+            value={preferred.videoInput ?? ''}
+            onChange={(event) => choose('videoInput', event.target.value)}
+            aria-label="Cámara"
+          >
+            <option value="">Predeterminada del sistema</option>
+            {devices.video.map((device) => (
+              <option key={device.deviceId} value={device.deviceId}>
+                {device.label}
+              </option>
+            ))}
+          </select>
+        </SettingRow>
+      </div>
+
+      {devices.audio.length === 0 && devices.video.length === 0 ? (
+        <p className={styles.sessionMeta}>
+          Los nombres de tus dispositivos aparecen cuando el navegador tiene permiso. Pulsa
+          «Probar» y acepta para verlos.
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+/* -------------------------------- Seguridad --------------------------------- */
+
+interface SessionInfo {
+  id: string;
+  userAgent: string | null;
+  createdAt: string;
 }
 
 function SecuritySection() {
@@ -254,111 +596,77 @@ function SecuritySection() {
   };
 
   return (
-    <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Seguridad</h2>
+    <>
+      <div className={styles.block}>
+        <span className={styles.blockTitle}>Contraseña</span>
 
-      <Field label="Contraseña actual">
-        {(id) => (
-          <Input
-            id={id}
-            type="password"
-            value={current}
-            onChange={(event) => setCurrent(event.target.value)}
-            autoComplete="current-password"
-          />
-        )}
-      </Field>
+        <Field label="Contraseña actual">
+          {(id) => (
+            <Input
+              id={id}
+              type="password"
+              value={current}
+              onChange={(event) => setCurrent(event.target.value)}
+              autoComplete="current-password"
+            />
+          )}
+        </Field>
 
-      <Field label="Nueva contraseña" hint={`Al menos ${LIMITS.password.min} caracteres.`}>
-        {(id) => (
-          <Input
-            id={id}
-            type="password"
-            value={next}
-            onChange={(event) => setNext(event.target.value)}
-            autoComplete="new-password"
-          />
-        )}
-      </Field>
+        <Field label="Nueva contraseña" hint={`Al menos ${LIMITS.password.min} caracteres.`}>
+          {(id) => (
+            <Input
+              id={id}
+              type="password"
+              value={next}
+              onChange={(event) => setNext(event.target.value)}
+              autoComplete="new-password"
+            />
+          )}
+        </Field>
 
-      <div className={styles.actions}>
-        <Button
-          variant="primary"
-          onClick={changePassword}
-          loading={saving}
-          disabled={!current || next.length < LIMITS.password.min}
-        >
-          Cambiar contraseña
-        </Button>
-      </div>
-
-      <h3 className={styles.sectionTitle}>Sesiones abiertas</h3>
-      {sessions?.map((session) => (
-        <div key={session.id} className={styles.sessionRow}>
-          <Monitor size={16} />
-          <span className={styles.sessionText}>
-            <span className={styles.sessionTitle}>{session.userAgent ?? 'Dispositivo'}</span>
-            <span className={styles.sessionMeta}>Desde {fullStamp(session.createdAt)}</span>
-          </span>
-          <IconButton
-            label="Cerrar esta sesión"
-            onClick={async () => {
-              try {
-                await api.delete(`/auth/sessions/${session.id}`);
-                setSessions((current) => current?.filter((item) => item.id !== session.id) ?? null);
-              } catch (err) {
-                toastError(err);
-              }
-            }}
+        <div className={styles.actions}>
+          <Button
+            variant="primary"
+            onClick={changePassword}
+            loading={saving}
+            disabled={!current || next.length < LIMITS.password.min}
           >
-            <LogOut size={15} />
-          </IconButton>
+            Cambiar contraseña
+          </Button>
         </div>
-      ))}
-
-      <div className={styles.actions}>
-        <Button variant="danger" onClick={closeAll}>
-          Cerrar todas las sesiones
-        </Button>
       </div>
-    </section>
-  );
-}
 
-function ShortcutsSection() {
-  const modifier = navigator.platform.toLowerCase().includes('mac') ? '⌘' : 'Ctrl';
-  const shortcuts: [string, string][] = [
-    ['Buscar en todo KYRO', `${modifier} + K`],
-    ['Ir a Inicio', `${modifier} + Shift + H`],
-    ['Ir a Mensajes', `${modifier} + Shift + M`],
-    ['Ir a Comunidades', `${modifier} + Shift + C`],
-    ['Ir a Actividad', `${modifier} + Shift + A`],
-    ['Ir a Llamadas', `${modifier} + Shift + L`],
-  ];
-
-  return (
-    <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Atajos de teclado</h2>
-      <div className={styles.shortcuts}>
-        {shortcuts.map(([label, keys]) => (
-          <Fragment key={label}>
-            <span>{label}</span>
-            <span className={styles.key}>{keys}</span>
-          </Fragment>
+      <div className={styles.block}>
+        <span className={styles.blockTitle}>Sesiones abiertas</span>
+        {sessions?.map((session) => (
+          <div key={session.id} className={styles.sessionRow}>
+            <Monitor size={16} />
+            <span className={styles.sessionText}>
+              <span className={styles.sessionTitle}>{session.userAgent ?? 'Dispositivo'}</span>
+              <span className={styles.sessionMeta}>Desde {fullStamp(session.createdAt)}</span>
+            </span>
+            <IconButton
+              label="Cerrar esta sesión"
+              onClick={async () => {
+                try {
+                  await api.delete(`/auth/sessions/${session.id}`);
+                  setSessions((list) => list?.filter((item) => item.id !== session.id) ?? null);
+                } catch (err) {
+                  toastError(err);
+                }
+              }}
+            >
+              <LogOut size={15} />
+            </IconButton>
+          </div>
         ))}
-      </div>
-    </section>
-  );
-}
 
-function AboutSection() {
-  return (
-    <section className={styles.section}>
-      <div className={styles.about}>
-        <span className={styles.brandName}>{brand.name}</span>
-        <span>{brand.tagline}</span>
-        <span>{brand.idea}</span>
+        <div className={styles.danger}>
+          <Button variant="danger" onClick={closeAll}>
+            Cerrar todas las sesiones
+          </Button>
+        </div>
       </div>
-    </section>
+    </>
   );
 }

@@ -38,6 +38,7 @@ export function App() {
   useRealtime();
   useShortcuts();
   useInitialData(Boolean(user));
+  useMotionPreference(user?.preferences.reducedMotion ?? false);
 
   if (status === 'loading') {
     return (
@@ -85,6 +86,13 @@ export function App() {
       <Toaster />
     </>
   );
+}
+
+/** La preferencia de movimiento del usuario se aplica a toda la interfaz. */
+function useMotionPreference(reduced: boolean) {
+  useEffect(() => {
+    document.documentElement.dataset.reducedMotion = reduced ? 'true' : 'false';
+  }, [reduced]);
 }
 
 /** Datos que la aplicación necesita nada más entrar. */

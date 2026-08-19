@@ -1,5 +1,6 @@
 import type { RTCIceServerConfig, RtcSignal, RtcSignalPayload } from '@kyro/shared';
 import { getSocket } from '@/lib/socket';
+import { audioConstraints, preferredVideoDevice } from '@/lib/devices';
 import { rtcLog, rtcWarn } from './log';
 
 /**
@@ -365,7 +366,7 @@ export async function requestMedia(video: boolean): Promise<MediaStream> {
   }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true },
+      audio: audioConstraints(),
       video: video ? videoConstraints() : false,
     });
     rtcLog('medios locales concedidos', stream.getTracks().map((track) => track.kind));
@@ -377,10 +378,12 @@ export async function requestMedia(video: boolean): Promise<MediaStream> {
 }
 
 export function videoConstraints(facingMode?: 'user' | 'environment'): MediaTrackConstraints {
+  const preferred = preferredVideoDevice();
   return {
     width: { ideal: 1280 },
     height: { ideal: 720 },
-    ...(facingMode ? { facingMode } : {}),
+    // La cámara elegida en ajustes; al cambiar de cara (móvil) manda el sentido.
+    ...(facingMode ? { facingMode } : preferred ? { deviceId: { ideal: preferred } } : {}),
   };
 }
 

@@ -238,3 +238,13 @@ svg {
     scroll-behavior: auto !important;
   }
 }
+
+/* Lo mismo, pero elegido en los ajustes de KYRO en vez de en el sistema. */
+[data-reduced-motion='true'] *,
+[data-reduced-motion='true'] *::before,
+[data-reduced-motion='true'] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
+}

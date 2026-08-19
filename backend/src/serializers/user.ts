@@ -1,6 +1,7 @@
 import type { CurrentUser, CustomStatus, PresenceStatus, PublicUser, UserActivity, UserPreferences } from '@kyro/shared';
 import type { User } from '@prisma/client';
 import { effectiveStatuses } from '../realtime/presence.js';
+import { hidesLastSeen } from '../lib/privacy.js';
 
 export const publicUserSelect = {
   id: true,
@@ -14,12 +15,15 @@ export const publicUserSelect = {
   activityJson: true,
   lastSeenAt: true,
   createdAt: true,
+  // Se usa solo para aplicar privacidad; nunca sale en el contrato público.
+  preferencesJson: true,
 } as const;
 
 export type UserRow = Pick<User, keyof typeof publicUserSelect & keyof User>;
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   notifications: { messages: true, mentions: true, communities: true, calls: true, sounds: true },
+  privacy: { messages: 'everyone', calls: 'everyone', showPresence: true, showLastSeen: true },
   reducedMotion: false,
   enterToSend: true,
 };
@@ -50,6 +54,7 @@ export function parsePreferences(raw: string | null): UserPreferences {
     ...DEFAULT_PREFERENCES,
     ...stored,
     notifications: { ...DEFAULT_PREFERENCES.notifications, ...(stored.notifications ?? {}) },
+    privacy: { ...DEFAULT_PREFERENCES.privacy, ...(stored.privacy ?? {}) },
   };
 }
 
@@ -64,7 +69,7 @@ export function serializeUser(user: UserRow, status: PresenceStatus): PublicUser
     status,
     customStatus: parseCustomStatus(user.customStatusJson),
     activity: parseActivity(user.activityJson),
-    lastSeenAt: user.lastSeenAt?.toISOString() ?? null,
+    lastSeenAt: hidesLastSeen(user.preferencesJson) ? null : (user.lastSeenAt?.toISOString() ?? null),
     createdAt: user.createdAt.toISOString(),
   };
 }
