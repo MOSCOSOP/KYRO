@@ -1,0 +1,183 @@
+/**
+ * Perfil flotante.
+ *
+ * Ver quién es alguien no debería sacarte de la conversación: el perfil entra
+ * por el lado, se lee y se cierra. En pantallas estrechas sube desde abajo,
+ * que es donde está el pulgar.
+ */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: rgba(4, 5, 8, 0.5);
+  display: flex;
+  justify-content: flex-end;
+  animation: kyro-fade-in var(--duration-fast) var(--ease);
+}
+
+.panel {
+  position: relative;
+  width: min(380px, 100%);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  animation: slide-in var(--duration) var(--ease);
+  overflow-y: auto;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 1;
+}
+
+/* Cabecera: el color de acento de la persona, muy diluido. */
+.cover {
+  height: 116px;
+  background: var(--brand-gradient-soft);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-5) var(--space-4);
+  margin-top: -42px;
+  text-align: center;
+}
+
+.avatarRing {
+  padding: 3px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+}
+
+.name {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: var(--tracking-title);
+}
+
+.handle {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.presence {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.bio {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  padding: 0 var(--space-5);
+  text-align: center;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5) var(--space-5);
+}
+
+.sectionTitle {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-tertiary);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: var(--text-sm);
+  width: 100%;
+  text-align: left;
+  transition: background var(--duration-fast) var(--ease);
+}
+
+.row:hover {
+  background: var(--surface-2);
+  text-decoration: none;
+}
+
+.rowIcon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.meta {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  padding: 0 var(--space-5) var(--space-6);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .backdrop {
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .panel {
+    width: 100%;
+    height: auto;
+    max-height: 88vh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    animation: sheet-in var(--duration) var(--ease);
+  }
+
+  @keyframes sheet-in {
+    from {
+      transform: translateY(28px);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+}

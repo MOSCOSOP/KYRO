@@ -1,3 +1,12 @@
+/**
+ * Inicio.
+ *
+ * No es un panel de control: no hay métricas, ni rejillas de tarjetas, ni
+ * llamadas a la acción. Primero las personas, después las conversaciones y solo
+ * al final lo que esté ocurriendo ahora. Si algo no está pasando, no ocupa
+ * sitio.
+ */
+
 .page {
   flex: 1;
   min-height: 0;
@@ -5,24 +14,28 @@
 }
 
 .inner {
-  max-width: 980px;
+  max-width: 780px;
   margin: 0 auto;
-  padding: var(--space-10) var(--space-6) var(--space-12);
+  padding: var(--space-12) var(--space-6) var(--space-16);
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  gap: var(--space-10);
 }
+
+/* --------------------------------- Saludo --------------------------------- */
 
 .hero {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  animation: kyro-rise var(--duration-slow) var(--ease) both;
 }
 
 .greeting {
-  font-size: var(--text-2xl);
+  font-size: var(--text-3xl);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-tight);
 }
 
 .subline {
@@ -30,10 +43,18 @@
   font-size: var(--text-md);
 }
 
+.sublineAccent {
+  color: var(--text);
+}
+
+/* --------------------------------- Sección -------------------------------- */
+
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
+  animation: kyro-rise var(--duration-slow) var(--ease) both;
+  animation-delay: 60ms;
 }
 
 .sectionHead {
@@ -44,48 +65,121 @@
 }
 
 .sectionTitle {
-  font-size: var(--text-md);
-  font-weight: 600;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-tertiary);
+  font-weight: 500;
 }
 
 .sectionLink {
   font-size: var(--text-sm);
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   background: none;
+  padding: 0;
+  transition: color var(--duration-fast) var(--ease);
 }
 
 .sectionLink:hover {
   color: var(--text);
+  text-decoration: none;
 }
 
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--space-3);
+/* -------------------------------- Personas -------------------------------- */
+
+.people {
+  display: flex;
+  gap: var(--space-5);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scrollbar-width: none;
 }
 
-.card {
+.people::-webkit-scrollbar {
+  display: none;
+}
+
+.person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 72px;
+  flex-shrink: 0;
+  background: none;
+  padding: 0;
+  color: var(--text-secondary);
+  transition:
+    color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
+}
+
+.person:hover {
+  color: var(--text);
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+/* Anillo de presencia: el color vive alrededor del avatar, no encima. */
+.personRing {
+  padding: 2px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border-strong);
+  transition: border-color var(--duration) var(--ease);
+}
+
+.ringAvailable {
+  border-color: var(--presence-available);
+}
+.ringAway {
+  border-color: var(--presence-away);
+}
+.ringDnd {
+  border-color: var(--presence-dnd);
+}
+
+.personName {
+  font-size: var(--text-xs);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.personBadge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+}
+
+.personWrap {
+  position: relative;
+}
+
+/* ------------------------------ Conversaciones ----------------------------- */
+
+.threads {
+  display: flex;
+  flex-direction: column;
+}
+
+.thread {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
-  border-radius: var(--radius);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  margin: 0 calc(var(--space-3) * -1);
+  border-radius: var(--radius-lg);
   color: var(--text);
-  text-align: left;
-  transition:
-    border-color var(--duration-fast) var(--ease),
-    background var(--duration-fast) var(--ease);
+  transition: background var(--duration-fast) var(--ease);
 }
 
-.card:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-2);
+.thread:hover {
+  background: var(--surface);
   text-decoration: none;
 }
 
-.cardText {
+.threadBody {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -93,106 +187,136 @@
   gap: 2px;
 }
 
-.cardTitle {
-  font-size: var(--text-base);
+.threadTop {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.threadName {
+  font-size: var(--text-md);
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.cardMeta {
+.threadTime {
+  margin-left: auto;
   font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.threadPreview {
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.rows {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+.unread .threadName {
+  font-weight: 600;
 }
 
-.row {
+.unread .threadPreview {
+  color: var(--text);
+}
+
+/* --------------------------------- Ahora ---------------------------------- */
+
+.now {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.nowRow {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3);
-  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
-  text-align: left;
   width: 100%;
+  text-align: left;
+  transition: border-color var(--duration-fast) var(--ease);
 }
 
-.row:hover {
-  background: var(--surface-2);
+.nowRow:hover {
+  border-color: var(--border-strong);
   text-decoration: none;
 }
 
-.rowIcon {
+.nowIcon {
   display: grid;
   place-items: center;
   width: 34px;
   height: 34px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-3);
-  color: var(--text-secondary);
+  border-radius: var(--radius);
+  background: var(--accent-softer);
+  color: var(--accent);
   flex-shrink: 0;
 }
 
-.rowText {
+.nowText {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.rowTitle {
+.nowTitle {
   font-size: var(--text-base);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.rowMeta {
+.nowMeta {
   font-size: var(--text-xs);
   color: var(--text-secondary);
 }
 
-.communities {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.community {
+.live {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-full);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: var(--text-sm);
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--success);
 }
 
-.community:hover {
-  border-color: var(--border-strong);
-  text-decoration: none;
+.liveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--success);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.quiet {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  padding: var(--space-2) 0;
 }
 
 @media (max-width: 900px) {
   .inner {
-    padding: var(--space-6) var(--space-4) var(--space-10);
-    gap: var(--space-6);
+    padding: var(--space-8) var(--space-4) var(--space-12);
+    gap: var(--space-8);
   }
 
   .greeting {
-    font-size: var(--text-xl);
+    font-size: var(--text-2xl);
   }
 }

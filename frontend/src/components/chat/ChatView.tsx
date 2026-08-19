@@ -18,7 +18,7 @@ import {
 import type { Conversation, Message } from '@kyro/shared';
 import { api } from '@/lib/api';
 import { conversationName, otherMember } from '@/lib/conversation';
-import { lastSeenLabel, timeOf } from '@/lib/format';
+import { presenceLine, timeOf } from '@/lib/format';
 import { activeTypists, useChat } from '@/store/chat';
 import { useCalls } from '@/store/calls';
 import { usePresenceOf } from '@/store/presence';
@@ -84,7 +84,7 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
         : 'Varias personas escribiendo…';
     }
     if (conversation.type === 'direct' && presence) {
-      return lastSeenLabel(presence.status, presence.lastSeenAt);
+      return presenceLine(presence);
     }
     if (conversation.type === 'channel') {
       return conversation.topic ?? 'Canal de comunidad';

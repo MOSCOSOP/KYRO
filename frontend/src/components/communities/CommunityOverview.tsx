@@ -5,7 +5,7 @@ import type { CommunityDetail } from '@kyro/shared';
 import { ROLE_LABEL, can } from '@kyro/shared';
 import { eventStamp } from '@/lib/format';
 import { useCommunities } from '@/store/communities';
-import { toastError } from '@/store/ui';
+import { toastError, useUI } from '@/store/ui';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, Loading } from '@/components/ui/Feedback';
@@ -17,6 +17,7 @@ import styles from './Communities.module.css';
 export function CommunityOverview({ community }: { community: CommunityDetail }) {
   const members = useCommunities((state) => state.members[community.id]);
   const toggleAttendance = useCommunities((state) => state.toggleAttendance);
+  const openProfile = useUI((state) => state.openProfile);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [eventOpen, setEventOpen] = useState(false);
   const navigate = useNavigate();
@@ -144,7 +145,7 @@ export function CommunityOverview({ community }: { community: CommunityDetail })
                   key={member.user.id}
                   type="button"
                   className={styles.memberCard}
-                  onClick={() => navigate(`/u/${member.user.username}`)}
+                  onClick={() => openProfile(member.user.username)}
                 >
                   <Avatar user={member.user} size="sm" presence />
                   <span className={styles.memberText}>

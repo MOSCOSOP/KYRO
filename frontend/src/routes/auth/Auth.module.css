@@ -1,65 +1,225 @@
+/**
+ * Pantallas de acceso.
+ *
+ * No es una tarjeta centrada sobre un fondo plano. Es una composición: a la
+ * izquierda la marca y lo que KYRO es; a la derecha, el formulario. El fondo
+ * tiene profundidad —dos luces muy abiertas que se mueven muy despacio— y una
+ * retícula casi invisible que le da textura sin decorar.
+ */
+
 .page {
+  position: relative;
   min-height: 100dvh;
-  display: grid;
-  grid-template-columns: 1fr;
-  place-items: center;
-  padding: var(--space-6) var(--space-4);
-  background:
-    radial-gradient(80rem 40rem at 50% -20%, rgba(107, 123, 255, 0.07), transparent 60%),
-    var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-5);
+  background: var(--bg-deep);
+  overflow: hidden;
+  isolation: isolate;
 }
 
-.card {
+/* ------------------------------- Ambiente --------------------------------- */
+
+.aura {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.auraBlue {
+  width: min(52rem, 90vw);
+  height: min(52rem, 90vw);
+  top: -22%;
+  left: -14%;
+  background: radial-gradient(circle, rgba(76, 125, 255, 0.2), transparent 65%);
+  animation: drift-a 26s ease-in-out infinite alternate;
+}
+
+.auraViolet {
+  width: min(46rem, 85vw);
+  height: min(46rem, 85vw);
+  right: -16%;
+  bottom: -24%;
+  background: radial-gradient(circle, rgba(164, 107, 255, 0.16), transparent 65%);
+  animation: drift-b 32s ease-in-out infinite alternate;
+}
+
+/* Retícula: se intuye más que se ve, y da escala a la pantalla. */
+.grid {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.016) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 10%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 10%, transparent 78%);
+  pointer-events: none;
+}
+
+@keyframes drift-a {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(6%, 5%, 0);
+  }
+}
+
+@keyframes drift-b {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-5%, -4%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auraBlue,
+  .auraViolet {
+    animation: none;
+  }
+}
+
+/* ------------------------------ Composición -------------------------------- */
+
+.layout {
   width: 100%;
-  max-width: 400px;
+  max-width: 1040px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-10);
+  align-items: center;
+}
+
+@media (min-width: 940px) {
+  .layout {
+    grid-template-columns: 1fr 400px;
+    gap: var(--space-16);
+  }
+}
+
+/* Lado de la marca */
+
+.brandSide {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  animation: kyro-rise var(--duration) var(--ease);
+  animation: kyro-rise var(--duration-slow) var(--ease) both;
 }
 
-.wide {
-  max-width: 520px;
+.statement {
+  font-size: clamp(1.6rem, 1.1rem + 2vw, var(--text-3xl));
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  color: var(--text);
+  max-width: 18ch;
 }
 
-.brand {
+.statementAccent {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.support {
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  max-width: 42ch;
+}
+
+.marks {
   display: flex;
   flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.markRow {
+  display: flex;
   align-items: center;
-  gap: var(--space-2);
-  text-align: center;
-}
-
-.wordmark {
-  font-size: var(--text-2xl);
-  font-weight: 700;
-  letter-spacing: -0.04em;
-}
-
-.tagline {
+  gap: var(--space-3);
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
+.markDot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: var(--brand-gradient);
+  flex-shrink: 0;
+}
+
+@media (max-width: 939px) {
+  .brandSide {
+    align-items: center;
+    text-align: center;
+    gap: var(--space-4);
+  }
+
+  .statement {
+    max-width: 22ch;
+  }
+
+  .marks {
+    display: none;
+  }
+}
+
+/* --------------------------------- Panel ---------------------------------- */
+
 .panel {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-6);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  gap: var(--space-5);
+  padding: var(--space-8) var(--space-6);
+  border-radius: var(--radius-xl);
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-lg), var(--inset-top);
+  animation: panel-in var(--duration-slow) var(--ease) both;
+  animation-delay: 60ms;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .title {
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
   font-weight: 600;
+  letter-spacing: var(--tracking-title);
 }
 
 .subtitle {
   font-size: var(--text-sm);
   color: var(--text-secondary);
-  margin-top: calc(var(--space-1) * -1);
 }
 
 .form {
@@ -75,24 +235,166 @@
   padding: var(--space-3);
   border-radius: var(--radius);
   background: var(--danger-soft);
+  border: 1px solid rgba(236, 96, 118, 0.28);
   color: var(--danger);
   font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  animation: kyro-rise var(--duration) var(--ease);
+}
+
+.alert svg {
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 .footer {
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
 .link {
-  color: var(--accent);
+  color: var(--text);
   background: none;
   font-size: inherit;
+  font-weight: 500;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-fast) var(--ease);
 }
 
 .link:hover {
-  text-decoration: underline;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* --------------------------------- Pasos ---------------------------------- */
+
+.steps {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.step {
+  height: 2px;
+  flex: 1;
+  border-radius: var(--radius-full);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.stepFill {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--brand-gradient);
+  transition: width var(--duration-slow) var(--ease);
+}
+
+.stepDone .stepFill,
+.stepCurrent .stepFill {
+  width: 100%;
+}
+
+.stepCurrent .stepFill {
+  opacity: 0.65;
+}
+
+.stepLabel {
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.stepPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  animation: step-in var(--duration) var(--ease) both;
+}
+
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* -------------------------------- Identidad -------------------------------- */
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.avatarPick {
+  position: relative;
+  border-radius: var(--radius-full);
+  border: 1px dashed var(--border-strong);
+  padding: 3px;
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
+}
+
+.avatarPick:hover {
+  border-color: var(--accent-border);
+  transform: translateY(-1px);
+}
+
+.avatarHint {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.avatarTitle {
+  font-size: var(--text-base);
+  color: var(--text);
+}
+
+.avatarNote {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* Resumen final del registro. */
+
+.ready {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) 0 var(--space-2);
+  text-align: center;
+}
+
+.readyName {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: var(--tracking-title);
+}
+
+.readyHandle {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
 .legal {
@@ -100,79 +402,4 @@
   font-size: var(--text-xs);
   color: var(--text-tertiary);
   line-height: var(--leading-relaxed);
-}
-
-/* -------------------------------- Onboarding ------------------------------- */
-
-.steps {
-  display: flex;
-  gap: var(--space-2);
-  justify-content: center;
-}
-
-.step {
-  width: 28px;
-  height: 3px;
-  border-radius: var(--radius-full);
-  background: var(--surface-3);
-}
-
-.stepActive {
-  background: var(--accent);
-}
-
-.avatarPicker {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-.people {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.person {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2);
-  border-radius: var(--radius);
-  text-align: left;
-  width: 100%;
-  transition: background var(--duration-fast) var(--ease);
-}
-
-.person:hover {
-  background: var(--surface-2);
-}
-
-.personText {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.personName {
-  font-size: var(--text-base);
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.personHandle {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
-.actions {
-  display: flex;
-  gap: var(--space-2);
-  justify-content: space-between;
-  align-items: center;
 }

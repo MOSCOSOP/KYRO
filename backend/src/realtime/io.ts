@@ -13,6 +13,7 @@ import { registerCallHandlers } from './handlers/calls.js';
 import { markOffline, markOnline } from './presence.js';
 import { broadcastPresence } from './broadcast.js';
 import { leaveCurrentRoom, roomParticipants } from './rooms.js';
+import { leaveContext } from './context.js';
 
 export interface SocketData {
   userId: string;
@@ -105,6 +106,7 @@ export async function initRealtime(server: HttpServer) {
         if (connections === 0) {
           const roomId = await leaveCurrentRoom(userId);
           if (roomId) {
+            await leaveContext(userId, 'room');
             emit({ targets: { kind: 'room', ids: [voiceRoomChannel(roomId)] } , event: 'room:peer-left', payload: { roomId, userId } });
             const participants = await roomParticipants(roomId);
             emit({

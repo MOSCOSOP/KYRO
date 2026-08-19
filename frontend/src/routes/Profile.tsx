@@ -4,7 +4,7 @@ import { MessageCircle, Phone, UserCheck, UserPlus, Users, Video } from 'lucide-
 import type { Conversation, ContactStatus, PublicUser } from '@kyro/shared';
 import { api } from '@/lib/api';
 import { pageTitle } from '@/config/brand';
-import { fullStamp, lastSeenLabel } from '@/lib/format';
+import { fullStamp, presenceLine } from '@/lib/format';
 import { useCalls } from '@/store/calls';
 import { useChat } from '@/store/chat';
 import { usePresenceOf } from '@/store/presence';
@@ -132,7 +132,7 @@ export function Profile() {
               <h1 className={styles.overviewTitle}>{profile.user.displayName}</h1>
               <p className={styles.overviewMeta}>
                 @{profile.user.username}
-                {presence ? ` · ${lastSeenLabel(presence.status, presence.lastSeenAt)}` : ''}
+                {presence ? ` · ${presenceLine(presence)}` : ''}
               </p>
               {profile.user.customStatus?.text ? (
                 <p className={styles.overviewMeta}>

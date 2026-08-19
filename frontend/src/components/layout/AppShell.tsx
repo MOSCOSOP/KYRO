@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useMemo, useRef, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import {
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { PresenceStatus } from '@kyro/shared';
 import { brand } from '@/config/brand';
+import { Logo } from '@/components/brand/Logo';
 import { PRESENCE_LABEL } from '@/lib/format';
 import { useChat } from '@/store/chat';
 import { useNotifications } from '@/store/notifications';
@@ -24,6 +25,8 @@ import { Avatar, PresenceDot } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Feedback';
 import { Menu, MenuHeading, MenuItem, MenuSeparator, useMenu } from '@/components/ui/Menu';
 import { CustomStatusModal } from '@/components/profile/CustomStatusModal';
+import { NewConversationModal } from '@/components/chat/NewConversationModal';
+import { SavedMessagesModal } from '@/components/chat/SavedMessagesModal';
 import { useIsCompact } from '@/hooks/useMediaQuery';
 import styles from './AppShell.module.css';
 
@@ -39,7 +42,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const menu = useMenu();
   const avatarRef = useRef<HTMLButtonElement>(null);
-  const [statusOpen, setStatusOpen] = useState(false);
+  const modal = useUI((state) => state.modal);
+  const openModal = useUI((state) => state.openModal);
+  const closeModal = useUI((state) => state.closeModal);
 
   const unreadMessages = useMemo(
     () => conversations.reduce((total, conversation) => total + conversation.unreadCount, 0),
@@ -49,7 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className={styles.shell}>
       <nav className={styles.nav} aria-label="Navegación principal">
-        <BrandMark />
+        <Logo size="sm" markOnly className={styles.brand} />
 
         <NavItem to="/" label="Inicio" icon={<Home size={19} />} end />
         <NavItem
@@ -115,7 +120,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <MenuItem
             icon={<SmilePlus size={16} />}
             onSelect={() => {
-              setStatusOpen(true);
+              openModal('custom-status');
               menu.close();
             }}
           >
@@ -144,35 +149,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Menu>
       ) : null}
 
-      <CustomStatusModal open={statusOpen} onClose={() => setStatusOpen(false)} />
+      <CustomStatusModal open={modal === 'custom-status'} onClose={closeModal} />
+      <NewConversationModal open={modal === 'new-conversation'} onClose={closeModal} />
+      <SavedMessagesModal open={modal === 'saved-messages'} onClose={closeModal} />
     </div>
-  );
-}
-
-/**
- * Marca de la aplicación: `public/logo.png`. Si el archivo no está, se cae a la
- * inicial en lugar de dejar el hueco de una imagen rota.
- */
-function BrandMark() {
-  const [failed, setFailed] = useState(false);
-
-  if (failed) {
-    return (
-      <span className={styles.brand} aria-hidden>
-        {brand.name.charAt(0)}
-      </span>
-    );
-  }
-
-  return (
-    <span className={styles.brand}>
-      <img
-        src="/logo.png"
-        alt={brand.name}
-        className={styles.brandImage}
-        onError={() => setFailed(true)}
-      />
-    </span>
   );
 }
 

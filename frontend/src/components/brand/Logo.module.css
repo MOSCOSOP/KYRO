@@ -1,0 +1,50 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  user-select: none;
+}
+
+.mark {
+  display: block;
+  flex-shrink: 0;
+  /* El logotipo ya es casi negro: el halo lo separa del fondo sin recuadro. */
+  filter: drop-shadow(0 0 18px rgba(76, 125, 255, 0.18))
+    drop-shadow(0 0 34px rgba(164, 107, 255, 0.12));
+}
+
+.wordmark {
+  font-weight: 700;
+  letter-spacing: var(--tracking-display);
+  color: var(--text);
+  line-height: 1;
+}
+
+.sm .wordmark {
+  font-size: var(--text-lg);
+}
+.md .wordmark {
+  font-size: var(--text-xl);
+}
+.lg .wordmark {
+  font-size: var(--text-2xl);
+}
+.xl .wordmark {
+  font-size: var(--text-3xl);
+}
+
+/* La marca respira una vez al entrar y se queda quieta. */
+.enter .mark {
+  animation: logo-in var(--duration-slow) var(--ease) both;
+}
+
+@keyframes logo-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

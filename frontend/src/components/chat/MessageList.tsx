@@ -5,6 +5,7 @@ import { conversationName, isGrouped, isSameDay } from '@/lib/conversation';
 import { dayLabel } from '@/lib/format';
 import { activeTypists, useChat } from '@/store/chat';
 import { useSession } from '@/store/session';
+import { Avatar } from '@/components/ui/Avatar';
 import { Loading, Spinner } from '@/components/ui/Feedback';
 import { MessageItem } from './MessageItem';
 import styles from './MessageList.module.css';
@@ -124,14 +125,21 @@ export function MessageList({ conversation }: { conversation: Conversation }) {
       <div className={styles.typing} aria-live="polite">
         {typists.length > 0 ? (
           <>
+            <span className={styles.typingFaces} aria-hidden>
+              {typists.slice(0, 3).map((person) => (
+                <Avatar key={person.id} user={person} size="xs" className={styles.typingFace} />
+              ))}
+            </span>
             <span className={styles.dots} aria-hidden>
               <span className={styles.dot} />
               <span className={styles.dot} />
               <span className={styles.dot} />
             </span>
-            {typists.length === 1
-              ? `${typists[0].displayName} está escribiendo…`
-              : `${typists.length} personas están escribiendo…`}
+            <span className={styles.typingText}>
+              {typists.length === 1
+                ? `${typists[0].displayName.split(' ')[0]} está escribiendo`
+                : `${typists.length} personas están escribiendo`}
+            </span>
           </>
         ) : null}
       </div>

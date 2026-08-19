@@ -14,3 +14,11 @@ createRoot(container).render(
     </BrowserRouter>
   </StrictMode>,
 );
+
+// El service worker solo acelera el arranque y evita la pantalla de error del
+// navegador sin conexión. En desarrollo estorba, así que no se registra.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+  });
+}

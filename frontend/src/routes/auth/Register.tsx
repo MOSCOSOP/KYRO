@@ -1,19 +1,49 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowRight, AtSign } from 'lucide-react';
 import { LIMITS } from '@kyro/shared';
-import { brand, pageTitle } from '@/config/brand';
+import { ApiError, api } from '@/lib/api';
+import { pageTitle } from '@/config/brand';
 import { useSession } from '@/store/session';
+import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { Field, Input } from '@/components/ui/Field';
+import { AuthField, PasswordField, PasswordStrength } from './AuthField';
+import { AuthLayout } from './AuthLayout';
 import styles from './Auth.module.css';
+
+type UsernameState =
+  | { status: 'idle' }
+  | { status: 'checking' }
+  | { status: 'ok' }
+  | { status: 'bad'; message: string };
+
+const STEP_LABELS = ['Cuenta', 'Identidad', 'Listo'];
+
+const USERNAME_REASON: Record<string, string> = {
+  short: `Mínimo ${LIMITS.username.min} caracteres.`,
+  long: `Máximo ${LIMITS.username.max} caracteres.`,
+  invalid: 'Solo minúsculas, números, punto y guion bajo.',
+  taken: 'Ese @usuario ya está en uso.',
+};
+
+function explain(err: unknown) {
+  if (err instanceof ApiError) {
+    if (err.code === 'network_error') return 'No hemos podido conectar con KYRO.';
+    if (err.status === 429) return 'Demasiados intentos. Espera unos minutos.';
+    return err.message;
+  }
+  return 'No hemos podido crear la cuenta.';
+}
 
 export function Register() {
   const register = useSession((state) => state.register);
-  const [displayName, setDisplayName] = useState('');
-  const [username, setUsername] = useState('');
+  const [step, setStep] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
+  const [usernameState, setUsernameState] = useState<UsernameState>({ status: 'idle' });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -21,23 +51,71 @@ export function Register() {
     document.title = pageTitle('Crear cuenta');
   }, []);
 
-  const usernameError = useMemo(() => {
-    if (!username) return null;
-    if (username.length < LIMITS.username.min) return 'Mínimo 3 caracteres';
-    if (!LIMITS.username.pattern.test(username)) {
-      return 'Solo minúsculas, números, punto y guion bajo';
+  /* Disponibilidad del @usuario mientras se escribe. */
+  useEffect(() => {
+    const value = username.trim().toLowerCase();
+    if (!value) {
+      setUsernameState({ status: 'idle' });
+      return;
     }
-    return null;
+    if (value.length < LIMITS.username.min) {
+      setUsernameState({ status: 'bad', message: USERNAME_REASON.short });
+      return;
+    }
+    if (!LIMITS.username.pattern.test(value)) {
+      setUsernameState({ status: 'bad', message: USERNAME_REASON.invalid });
+      return;
+    }
+
+    let cancelled = false;
+    setUsernameState({ status: 'checking' });
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await api.get<{ available: boolean; reason?: string }>('/auth/username', {
+          query: { u: value },
+          skipRefresh: true,
+        });
+        if (cancelled) return;
+        setUsernameState(
+          result.available
+            ? { status: 'ok' }
+            : {
+                status: 'bad',
+                message: USERNAME_REASON[result.reason ?? 'taken'] ?? USERNAME_REASON.taken,
+              },
+        );
+      } catch {
+        // Sin respuesta no se afirma nada: el servidor decidirá al crear la cuenta.
+        if (!cancelled) setUsernameState({ status: 'idle' });
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [username]);
+
+  const emailError = useMemo(() => {
+    if (!email) return null;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? null : 'Ese correo no parece válido.';
+  }, [email]);
 
   const passwordError =
     password && password.length < LIMITS.password.min
-      ? `Mínimo ${LIMITS.password.min} caracteres`
+      ? `La contraseña necesita al menos ${LIMITS.password.min} caracteres.`
       : null;
+
+  const confirmError = confirm && confirm !== password ? 'Las contraseñas no coinciden.' : null;
+
+  const canContinueAccount =
+    Boolean(email) && !emailError && password.length >= LIMITS.password.min && confirm === password;
+
+  const canContinueIdentity = displayName.trim().length > 0 && usernameState.status === 'ok';
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (usernameError || passwordError) return;
+    if (loading) return;
     setError(null);
     setLoading(true);
     try {
@@ -45,106 +123,177 @@ export function Register() {
         email: email.trim(),
         username: username.trim().toLowerCase(),
         password,
-        displayName: displayName.trim() || undefined,
+        displayName: displayName.trim(),
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear la cuenta');
+      setError(explain(err));
       setLoading(false);
+      // Si el conflicto es de identidad, se vuelve al paso que lo resuelve.
+      if (err instanceof ApiError && err.status === 409) setStep(1);
     }
   };
 
   return (
-    <main className={styles.page}>
-      <div className={styles.card}>
-        <header className={styles.brand}>
-          <span className={styles.wordmark}>{brand.name}</span>
-          <span className={styles.tagline}>{brand.idea}</span>
-        </header>
+    <AuthLayout
+      statement={['Crea tu', 'identidad en KYRO.']}
+      support="Un nombre, un @usuario y ya estás dentro. Podrás cambiarlo cuando quieras."
+    >
+      <header className={styles.head}>
+        <h2 className={styles.title}>Crear una cuenta</h2>
+        <p className={styles.subtitle}>{STEP_LABELS[step]} · Paso {step + 1} de 3</p>
+      </header>
 
-        <div className={styles.panel}>
-          <div>
-            <h1 className={styles.title}>Crea tu cuenta</h1>
-            <p className={styles.subtitle}>Un minuto y estás dentro.</p>
-          </div>
-
-          {error ? (
-            <div className={styles.alert} role="alert">
-              <AlertCircle size={16} />
-              <span>{error}</span>
-            </div>
-          ) : null}
-
-          <form className={styles.form} onSubmit={submit}>
-            <Field label="Tu nombre">
-              {(id) => (
-                <Input
-                  id={id}
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  placeholder="Alex Rivera"
-                  autoComplete="name"
-                  maxLength={LIMITS.displayName.max}
-                  autoFocus
-                />
-              )}
-            </Field>
-
-            <Field label="Nombre de usuario" error={usernameError} hint="Así te encontrarán: @tunombre">
-              {(id) => (
-                <Input
-                  id={id}
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value.toLowerCase())}
-                  placeholder="alex"
-                  autoComplete="username"
-                  maxLength={LIMITS.username.max}
-                  invalid={Boolean(usernameError)}
-                  required
-                />
-              )}
-            </Field>
-
-            <Field label="Correo">
-              {(id) => (
-                <Input
-                  id={id}
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="alex@correo.com"
-                  autoComplete="email"
-                  required
-                />
-              )}
-            </Field>
-
-            <Field label="Contraseña" error={passwordError} hint="Al menos 8 caracteres">
-              {(id) => (
-                <Input
-                  id={id}
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  autoComplete="new-password"
-                  invalid={Boolean(passwordError)}
-                  required
-                />
-              )}
-            </Field>
-
-            <Button type="submit" variant="primary" size="lg" block loading={loading}>
-              Crear cuenta
-            </Button>
-          </form>
-        </div>
-
-        <p className={styles.footer}>
-          ¿Ya tienes cuenta? <Link to="/entrar">Entrar</Link>
-        </p>
-        <p className={styles.legal}>
-          {brand.name} {brand.titleSeparator} {brand.taglineEn}
-        </p>
+      <div className={styles.steps} aria-hidden>
+        {STEP_LABELS.map((label, index) => (
+          <span
+            key={label}
+            className={`${styles.step} ${
+              index < step ? styles.stepDone : index === step ? styles.stepCurrent : ''
+            }`}
+          >
+            <span className={styles.stepFill} />
+          </span>
+        ))}
       </div>
-    </main>
+
+      {error ? (
+        <div className={styles.alert} role="alert">
+          <AlertCircle size={16} />
+          <span>{error}</span>
+        </div>
+      ) : null}
+
+      <form className={styles.form} onSubmit={submit} noValidate>
+        {step === 0 ? (
+          <div className={styles.stepPanel} key="cuenta">
+            <AuthField
+              label="Correo"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              error={emailError}
+              autoComplete="email"
+              autoFocus
+              required
+            />
+
+            <div>
+              <PasswordField
+                label="Contraseña"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                error={passwordError}
+                autoComplete="new-password"
+                required
+              />
+              <PasswordStrength value={password} />
+            </div>
+
+            <PasswordField
+              label="Repite la contraseña"
+              value={confirm}
+              onChange={(event) => setConfirm(event.target.value)}
+              error={confirmError}
+              autoComplete="new-password"
+              required
+            />
+
+            <Button
+              variant="primary"
+              size="lg"
+              block
+              disabled={!canContinueAccount}
+              icon={<ArrowRight size={16} />}
+              onClick={() => setStep(1)}
+            >
+              Continuar
+            </Button>
+          </div>
+        ) : null}
+
+        {step === 1 ? (
+          <div className={styles.stepPanel} key="identidad">
+            <AuthField
+              label="Tu nombre"
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              maxLength={LIMITS.displayName.max}
+              autoComplete="name"
+              autoFocus
+              required
+            />
+
+            <AuthField
+              label="@usuario"
+              value={username}
+              onChange={(event) =>
+                setUsername(event.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))
+              }
+              maxLength={LIMITS.username.max}
+              autoComplete="off"
+              spellCheck={false}
+              status={usernameState.status}
+              error={usernameState.status === 'bad' ? usernameState.message : null}
+              success={usernameState.status === 'ok' ? `@${username} está disponible.` : null}
+              hint="Así te encontrarán en KYRO."
+              required
+            />
+
+            <div className={styles.actions}>
+              <Button variant="ghost" icon={<ArrowLeft size={16} />} onClick={() => setStep(0)}>
+                Atrás
+              </Button>
+              <Button
+                variant="primary"
+                disabled={!canContinueIdentity}
+                icon={<ArrowRight size={16} />}
+                onClick={() => setStep(2)}
+              >
+                Continuar
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {step === 2 ? (
+          <div className={styles.stepPanel} key="listo">
+            <div className={styles.ready}>
+              <Avatar name={displayName} size="xl" />
+              <div>
+                <div className={styles.readyName}>{displayName}</div>
+                <div className={styles.readyHandle}>
+                  <AtSign size={12} style={{ display: 'inline', verticalAlign: '-1px' }} />
+                  {username}
+                </div>
+              </div>
+              <p className={styles.subtitle}>
+                Esto es lo que verán los demás. Podrás cambiarlo en cualquier momento.
+              </p>
+            </div>
+
+            <div className={styles.actions}>
+              <Button
+                variant="ghost"
+                icon={<ArrowLeft size={16} />}
+                onClick={() => setStep(1)}
+                disabled={loading}
+              >
+                Atrás
+              </Button>
+              <Button type="submit" variant="primary" loading={loading}>
+                Crear cuenta
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </form>
+
+      <p className={styles.footer}>
+        ¿Ya tienes cuenta?
+        <Link className={styles.link} to="/entrar">
+          Acceder
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }

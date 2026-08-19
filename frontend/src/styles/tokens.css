@@ -1,50 +1,70 @@
 /**
  * KYRO · tokens de diseño.
  *
- * Oscuro, sobrio y con poco contraste innecesario. Un solo acento (azul
- * violáceo) que se usa con moderación: estado activo, foco y poco más.
+ * La identidad sale del logotipo: una K angular casi negra con un filo de luz
+ * que va del azul al violeta. De ahí las tres reglas del sistema:
+ *
+ *   1. El fondo es negro, no gris oscuro. Las superficies se separan por tono,
+ *      no por bordes marcados.
+ *   2. El color es luz, no relleno. El acento aparece como filo, foco o brillo;
+ *      casi nunca como fondo sólido de grandes áreas.
+ *   3. La geometría es precisa: radios contenidos, bordes de 1px, nada blando.
+ *
  * Ningún componente define colores propios: todos salen de aquí.
  */
 
 :root {
   /* ------------------------------- Superficies --------------------------- */
-  --bg: #0d0f13;
-  --surface: #14171d;
-  --surface-2: #1a1e25;
-  --surface-3: #20252e;
-  --surface-hover: #1e232b;
-  --border: #252a33;
-  --border-strong: #333a46;
+  /* Del fondo hacia el frente. Cada nivel sube un punto de tono. */
+  --bg-deep: #050608;
+  --bg: #080a0e;
+  --surface: #0f1217;
+  --surface-2: #151920;
+  --surface-3: #1c212a;
+  --surface-hover: #191e26;
+  --border: #1f242e;
+  --border-strong: #2d3441;
 
   /* --------------------------------- Texto ------------------------------- */
-  --text: #f1f3f5;
-  --text-secondary: #9299a5;
-  --text-tertiary: #6b7280;
-  --text-inverse: #0d0f13;
+  --text: #f2f4f7;
+  --text-secondary: #949cab;
+  --text-tertiary: #6a7280;
+  --text-inverse: #08090c;
 
-  /* -------------------------------- Acento ------------------------------- */
-  --accent: #6b7bff;
-  --accent-hover: #7c8aff;
-  --accent-active: #5a69e8;
-  --accent-soft: rgba(107, 123, 255, 0.14);
-  --accent-softer: rgba(107, 123, 255, 0.08);
-  --accent-border: rgba(107, 123, 255, 0.35);
+  /* --------------------------------- Marca ------------------------------- */
+  /* Los dos extremos del filo de luz del logotipo. */
+  --brand-blue: #4c7dff;
+  --brand-violet: #a46bff;
+  --brand-gradient: linear-gradient(135deg, var(--brand-blue), var(--brand-violet));
+  --brand-gradient-soft: linear-gradient(
+    135deg,
+    rgba(76, 125, 255, 0.16),
+    rgba(164, 107, 255, 0.16)
+  );
+
+  /* Acento sólido: el punto medio del filo. */
+  --accent: #6b84ff;
+  --accent-hover: #8095ff;
+  --accent-active: #5a71e8;
+  --accent-soft: rgba(107, 132, 255, 0.14);
+  --accent-softer: rgba(107, 132, 255, 0.07);
+  --accent-border: rgba(107, 132, 255, 0.38);
   --on-accent: #ffffff;
 
   /* -------------------------------- Estados ------------------------------ */
-  --success: #46c48a;
-  --success-soft: rgba(70, 196, 138, 0.14);
+  --success: #3fc98c;
+  --success-soft: rgba(63, 201, 140, 0.14);
   --warning: #e0b155;
   --warning-soft: rgba(224, 177, 85, 0.14);
-  --danger: #e5657a;
-  --danger-hover: #ef7386;
-  --danger-soft: rgba(229, 101, 122, 0.14);
+  --danger: #ec6076;
+  --danger-hover: #f47285;
+  --danger-soft: rgba(236, 96, 118, 0.14);
 
   /* Presencia */
-  --presence-available: #46c48a;
+  --presence-available: #3fc98c;
   --presence-away: #e0b155;
-  --presence-dnd: #e5657a;
-  --presence-offline: #6b7280;
+  --presence-dnd: #ec6076;
+  --presence-offline: #5c636f;
 
   /* ------------------------------ Tipografía ----------------------------- */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu,
@@ -58,10 +78,16 @@
   --text-lg: 1.0625rem; /* 17px */
   --text-xl: 1.375rem; /* 22px */
   --text-2xl: 1.75rem; /* 28px */
+  --text-3xl: 2.25rem; /* 36px */
 
-  --leading-tight: 1.25;
+  --leading-tight: 1.2;
   --leading-normal: 1.5;
   --leading-relaxed: 1.65;
+
+  /* El texto grande va más cerrado; el pequeño, más abierto. */
+  --tracking-display: -0.03em;
+  --tracking-title: -0.015em;
+  --tracking-wide: 0.08em;
 
   /* -------------------------------- Espacio ------------------------------ */
   --space-1: 0.25rem;
@@ -73,6 +99,7 @@
   --space-8: 2rem;
   --space-10: 2.5rem;
   --space-12: 3rem;
+  --space-16: 4rem;
 
   /* -------------------------------- Formas ------------------------------- */
   --radius-sm: 6px;
@@ -81,9 +108,15 @@
   --radius-xl: 20px;
   --radius-full: 999px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.45);
+  /* Sombras oscuras y limpias: profundidad, no niebla. */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.6);
+  /* Brillo de marca: solo para lo que está realmente activo. */
+  --glow-accent: 0 0 24px rgba(107, 132, 255, 0.22);
+
+  /* Un único anillo de foco en toda la aplicación. */
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-border);
 
   /* ------------------------------ Movimiento ----------------------------- */
   /*
@@ -107,17 +140,17 @@
    */
   --elevated: rgba(255, 255, 255, 0.03);
   --elevated-strong: rgba(255, 255, 255, 0.05);
-  --inset-top: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --inset-top: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
   /* Vidrio: solo para superficies flotantes, nunca para el fondo. */
-  --glass: rgba(26, 30, 37, 0.72);
-  --glass-strong: rgba(20, 23, 29, 0.85);
+  --glass: rgba(18, 21, 27, 0.74);
+  --glass-strong: rgba(12, 14, 19, 0.88);
   --glass-border: rgba(255, 255, 255, 0.07);
-  --glass-blur: blur(18px) saturate(140%);
+  --glass-blur: blur(20px) saturate(150%);
 
-  /* Luz ambiental: azul violáceo muy desaturado y muy abierto. */
-  --ambient: rgba(107, 123, 255, 0.07);
-  --ambient-weak: rgba(107, 123, 255, 0.04);
+  /* Luz ambiental: el filo del logotipo, muy abierto y muy tenue. */
+  --ambient: rgba(76, 125, 255, 0.08);
+  --ambient-weak: rgba(164, 107, 255, 0.05);
 
   /* -------------------------------- Layout ------------------------------- */
   --nav-width: 76px;

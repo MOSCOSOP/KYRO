@@ -82,3 +82,22 @@ export function greeting(name: string) {
   if (hour < 20) return `Buenas tardes, ${name}`;
   return `Buenas noches, ${name}`;
 }
+
+/**
+ * Lo que se muestra bajo el nombre de alguien. El contexto manda: si está en
+ * una llamada o ha escrito un estado, eso dice más que "disponible".
+ */
+export function presenceLine(entry: {
+  status: PresenceStatus;
+  customStatus: { text: string | null; emoji: string | null } | null;
+  activity: { name: string } | null;
+  lastSeenAt: string | null;
+}) {
+  if (entry.activity?.name) return entry.activity.name;
+  if (entry.customStatus?.text) {
+    return entry.customStatus.emoji
+      ? `${entry.customStatus.emoji} ${entry.customStatus.text}`
+      : entry.customStatus.text;
+  }
+  return lastSeenLabel(entry.status, entry.lastSeenAt);
+}

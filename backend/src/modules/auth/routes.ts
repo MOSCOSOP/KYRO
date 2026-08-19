@@ -76,6 +76,21 @@ authRouter.post(
   }),
 );
 
+/**
+ * Disponibilidad de un @usuario. Público a propósito: se consulta mientras se
+ * escribe el registro. Solo responde sí o no —nunca revela datos de la cuenta—
+ * y va con el límite estricto de autenticación.
+ */
+authRouter.get(
+  '/username',
+  authLimiter,
+  validate(z.object({ u: z.string().max(LIMITS.username.max + 10) }), 'query'),
+  handler(async (req, res) => {
+    const { u } = validated<{ u: string }>(req, 'query');
+    res.json(await service.checkUsername(u));
+  }),
+);
+
 authRouter.post(
   '/refresh',
   authLimiter,

@@ -6,7 +6,7 @@ import type { Attachment, Conversation, Message, PublicUser } from '@kyro/shared
 import { ROLE_LABEL, ROLE_RANK } from '@kyro/shared';
 import { api } from '@/lib/api';
 import { conversationName, otherMember } from '@/lib/conversation';
-import { fileSize, lastSeenLabel } from '@/lib/format';
+import { fileSize, presenceLine } from '@/lib/format';
 import { useChat } from '@/store/chat';
 import { useSession } from '@/store/session';
 import { usePresenceOf } from '@/store/presence';
@@ -32,6 +32,7 @@ export function InfoPanel({
   const presence = usePresenceOf(peer);
   const navigate = useNavigate();
   const confirm = useUI((state) => state.confirm);
+  const openProfile = useUI((state) => state.openProfile);
   const [tab, setTab] = useState<Tab>('fotos');
   const [addOpen, setAddOpen] = useState(false);
   const [promoteOpen, setPromoteOpen] = useState(false);
@@ -73,11 +74,11 @@ export function InfoPanel({
             </div>
             {presence ? (
               <div className={styles.handle}>
-                {lastSeenLabel(presence.status, presence.lastSeenAt)}
+                {presenceLine(presence)}
               </div>
             ) : null}
             {peer.bio ? <p className={styles.bio}>{peer.bio}</p> : null}
-            <Button size="sm" onClick={() => navigate(`/u/${peer.username}`)}>
+            <Button size="sm" onClick={() => openProfile(peer.username)}>
               Ver perfil
             </Button>
           </div>
@@ -282,7 +283,7 @@ function MembersSection({
   conversation: Conversation;
   onAdd: () => void;
 }) {
-  const navigate = useNavigate();
+  const openProfile = useUI((state) => state.openProfile);
   const [members, setMembers] = useState<{ user: PublicUser; role: string }[] | null>(null);
 
   useEffect(() => {
@@ -318,7 +319,7 @@ function MembersSection({
             key={member.user.id}
             type="button"
             className={styles.member}
-            onClick={() => navigate(`/u/${member.user.username}`)}
+            onClick={() => openProfile(member.user.username)}
           >
             <Avatar user={member.user} size="sm" presence />
             <span className={styles.memberName}>{member.user.displayName}</span>

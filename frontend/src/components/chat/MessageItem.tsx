@@ -1,5 +1,4 @@
 import { memo, useRef, useState, type KeyboardEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import {
   Bookmark,
@@ -53,7 +52,7 @@ export const MessageItem = memo(function MessageItem({
   const editingId = useChat((state) => state.editing[conversation.id]);
   const chat = useChat.getState();
   const confirm = useUI((state) => state.confirm);
-  const navigate = useNavigate();
+  const openProfile = useUI((state) => state.openProfile);
 
   const editing = editingId === message.id;
   const mine = message.author?.id === selfId;
@@ -161,7 +160,7 @@ export const MessageItem = memo(function MessageItem({
             <button
               type="button"
               className={styles.author}
-              onClick={() => message.author && navigate(`/u/${message.author.username}`)}
+              onClick={() => message.author && openProfile(message.author.username)}
             >
               {message.author?.displayName ?? 'Alguien'}
             </button>

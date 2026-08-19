@@ -1,34 +1,71 @@
+/**
+ * Paleta de comandos.
+ *
+ * Es la pieza más reconocible de KYRO: una sola tecla y desde ahí se hace
+ * cualquier cosa —buscar a alguien, abrir una conversación, llamar, cambiar de
+ * estado—. Por eso tiene su propio tratamiento: filo de marca arriba, vidrio y
+ * un ritmo de teclado limpio.
+ */
+
 .backdrop {
   position: fixed;
   inset: 0;
   z-index: var(--z-modal);
-  background: rgba(5, 6, 9, 0.66);
+  background: rgba(4, 5, 8, 0.72);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 12vh var(--space-4) var(--space-4);
-  animation: kyro-fade-in var(--duration) var(--ease);
+  padding: 11vh var(--space-4) var(--space-4);
+  animation: kyro-fade-in var(--duration-fast) var(--ease);
 }
 
 .panel {
+  position: relative;
   width: 100%;
   max-width: 620px;
-  max-height: 70vh;
+  max-height: min(66vh, 560px);
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   overflow: hidden;
-  animation: kyro-rise var(--duration) var(--ease);
+  animation: palette-in var(--duration) var(--ease);
+}
+
+/* Filo de luz superior: el detalle que identifica la paleta. */
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: var(--brand-gradient);
+  opacity: 0.9;
+}
+
+@keyframes palette-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .searchRow {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-4);
   border-bottom: 1px solid var(--border);
 }
 
@@ -39,19 +76,25 @@
   outline: none;
   font-size: var(--text-lg);
   color: var(--text);
+  min-width: 0;
 }
 
 .input::placeholder {
   color: var(--text-tertiary);
 }
 
+.input:focus-visible {
+  box-shadow: none;
+}
+
 .hint {
-  font-size: var(--text-xs);
+  font-size: 10px;
   color: var(--text-tertiary);
   font-family: var(--font-mono);
-  padding: 2px 6px;
+  padding: 3px 6px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+  flex-shrink: 0;
 }
 
 .results {
@@ -59,30 +102,44 @@
   min-height: 0;
   overflow-y: auto;
   padding: var(--space-2);
+  scroll-padding: var(--space-6);
 }
 
 .group {
-  padding: var(--space-2) var(--space-2) var(--space-1);
+  padding: var(--space-3) var(--space-2) var(--space-1);
   font-size: var(--text-xs);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-wide);
   color: var(--text-tertiary);
 }
 
 .result {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius);
   text-align: left;
   color: var(--text);
+  scroll-margin: var(--space-4);
 }
 
-.result:hover,
+/* La fila activa se marca con fondo y un filo: se sigue con el teclado sin perderla. */
 .active {
   background: var(--surface-2);
+}
+
+.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: var(--brand-gradient);
 }
 
 .icon {
@@ -91,9 +148,17 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-sm);
-  background: var(--surface-3);
+  background: var(--surface-2);
   color: var(--text-secondary);
   flex-shrink: 0;
+  transition:
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.active .icon {
+  background: var(--accent-softer);
+  color: var(--accent);
 }
 
 .text {
@@ -118,11 +183,49 @@
   white-space: nowrap;
 }
 
+.enter {
+  opacity: 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  transition: opacity var(--duration-fast) var(--ease);
+}
+
+.active .enter {
+  opacity: 1;
+}
+
+.empty {
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
 .footer {
+  display: flex;
+  gap: var(--space-4);
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--border);
   font-size: var(--text-xs);
   color: var(--text-tertiary);
-  display: flex;
-  gap: var(--space-4);
+}
+
+.key {
+  font-family: var(--font-mono);
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-right: 5px;
+}
+
+@media (max-width: 560px) {
+  .backdrop {
+    padding: var(--space-4) var(--space-3);
+    align-items: flex-start;
+  }
+
+  .footer {
+    display: none;
+  }
 }

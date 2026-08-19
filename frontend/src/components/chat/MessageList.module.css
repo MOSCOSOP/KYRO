@@ -90,6 +90,26 @@
   color: var(--text);
 }
 
+/*
+ * Quién escribe, no solo que alguien escribe: las caras primero, después los
+ * puntos y por último el texto. Ocupa una línea fija para que el hilo no salte
+ * cuando aparece o desaparece.
+ */
+.typingFaces {
+  display: flex;
+  align-items: center;
+}
+
+.typingFace {
+  margin-right: -6px;
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.typingText {
+  opacity: 0.9;
+}
+
 .typing {
   display: flex;
   align-items: center;

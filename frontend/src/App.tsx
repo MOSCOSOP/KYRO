@@ -12,6 +12,7 @@ import { ConnectionBanner } from '@/components/layout/ConnectionBanner';
 import { CallOverlay } from '@/components/calls/CallOverlay';
 import { VoiceBar } from '@/components/calls/VoiceBar';
 import { CommandPalette } from '@/components/search/CommandPalette';
+import { ProfilePanel } from '@/components/profile/ProfilePanel';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Loading } from '@/components/ui/Feedback';
 import { Toaster } from '@/components/ui/Toaster';
@@ -79,6 +80,7 @@ export function App() {
       <VoiceBar />
       <CallOverlay />
       <CommandPalette />
+      <ProfilePanel />
       <ConfirmDialog />
       <Toaster />
     </>

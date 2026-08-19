@@ -42,6 +42,24 @@ export async function register(
   return issueSession(user, context);
 }
 
+export type UsernameCheck =
+  | { available: true; username: string }
+  | { available: false; username: string; reason: 'short' | 'long' | 'invalid' | 'taken' };
+
+/** Comprueba un @usuario sin exponer nada de la cuenta que lo ocupa. */
+export async function checkUsername(input: string): Promise<UsernameCheck> {
+  const username = input.trim().toLowerCase();
+
+  if (username.length < LIMITS.username.min) return { available: false, username, reason: 'short' };
+  if (username.length > LIMITS.username.max) return { available: false, username, reason: 'long' };
+  if (!LIMITS.username.pattern.test(username)) {
+    return { available: false, username, reason: 'invalid' };
+  }
+
+  const taken = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+  return taken ? { available: false, username, reason: 'taken' } : { available: true, username };
+}
+
 export async function login(
   input: { identifier: string; password: string },
   context: RequestContext,

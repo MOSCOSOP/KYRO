@@ -1,11 +1,26 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle } from 'lucide-react';
-import { brand, pageTitle } from '@/config/brand';
+import { AlertCircle, ArrowRight } from 'lucide-react';
+import { ApiError } from '@/lib/api';
+import { pageTitle } from '@/config/brand';
 import { useSession } from '@/store/session';
 import { Button } from '@/components/ui/Button';
-import { Field, Input } from '@/components/ui/Field';
+import { AuthField, PasswordField } from './AuthField';
+import { AuthLayout } from './AuthLayout';
 import styles from './Auth.module.css';
+
+/** Traduce el fallo a algo que el usuario pueda resolver. */
+function explain(err: unknown) {
+  if (err instanceof ApiError) {
+    if (err.code === 'network_error') {
+      return 'No hemos podido conectar con KYRO. Revisa tu conexión.';
+    }
+    if (err.status === 401) return 'Las credenciales no coinciden.';
+    if (err.status === 429) return 'Demasiados intentos. Espera unos minutos.';
+    return err.message;
+  }
+  return 'No hemos podido iniciar sesión.';
+}
 
 export function Login() {
   const login = useSession((state) => state.login);
@@ -15,81 +30,76 @@ export function Login() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    document.title = pageTitle('Entrar');
+    document.title = pageTitle('Acceder');
   }, []);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (loading) return;
     setError(null);
     setLoading(true);
     try {
       await login(identifier.trim(), password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión');
+      setError(explain(err));
       setLoading(false);
     }
   };
 
   return (
-    <main className={styles.page}>
-      <div className={styles.card}>
-        <header className={styles.brand}>
-          <span className={styles.wordmark}>{brand.name}</span>
-          <span className={styles.tagline}>{brand.tagline}</span>
-        </header>
+    <AuthLayout
+      statement={['Tu espacio', 'de comunicación.']}
+      support="Conversaciones, comunidades y encuentros en un mismo lugar. Sin cambiar de aplicación para hablar, llamar o compartir."
+    >
+      <header className={styles.head}>
+        <h2 className={styles.title}>Accede a tu cuenta</h2>
+        <p className={styles.subtitle}>Continúa donde lo dejaste.</p>
+      </header>
 
-        <div className={styles.panel}>
-          <div>
-            <h1 className={styles.title}>Bienvenido de nuevo</h1>
-            <p className={styles.subtitle}>Entra para seguir la conversación.</p>
-          </div>
-
-          {error ? (
-            <div className={styles.alert} role="alert">
-              <AlertCircle size={16} />
-              <span>{error}</span>
-            </div>
-          ) : null}
-
-          <form className={styles.form} onSubmit={submit}>
-            <Field label="Correo o usuario">
-              {(id) => (
-                <Input
-                  id={id}
-                  value={identifier}
-                  onChange={(event) => setIdentifier(event.target.value)}
-                  autoComplete="username"
-                  autoFocus
-                  required
-                  placeholder="alex o alex@correo.com"
-                />
-              )}
-            </Field>
-
-            <Field label="Contraseña">
-              {(id) => (
-                <Input
-                  id={id}
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  autoComplete="current-password"
-                  required
-                  placeholder="••••••••"
-                />
-              )}
-            </Field>
-
-            <Button type="submit" variant="primary" size="lg" block loading={loading}>
-              Entrar
-            </Button>
-          </form>
+      {error ? (
+        <div className={styles.alert} role="alert">
+          <AlertCircle size={16} />
+          <span>{error}</span>
         </div>
+      ) : null}
 
-        <p className={styles.footer}>
-          ¿Aún no tienes cuenta? <Link to="/crear-cuenta">Crear cuenta</Link>
-        </p>
-      </div>
-    </main>
+      <form className={styles.form} onSubmit={submit} noValidate>
+        <AuthField
+          label="Correo o @usuario"
+          value={identifier}
+          onChange={(event) => setIdentifier(event.target.value)}
+          autoComplete="username"
+          autoFocus
+          required
+        />
+
+        <PasswordField
+          label="Contraseña"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          autoComplete="current-password"
+          required
+        />
+
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          block
+          loading={loading}
+          disabled={!identifier.trim() || !password}
+          icon={loading ? undefined : <ArrowRight size={16} />}
+        >
+          Entrar
+        </Button>
+      </form>
+
+      <p className={styles.footer}>
+        ¿No tienes cuenta?
+        <Link className={styles.link} to="/crear-cuenta">
+          Crear una cuenta
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }

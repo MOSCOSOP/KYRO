@@ -3,6 +3,7 @@ import { prisma } from '../../lib/prisma.js';
 import { publicUserSelect, serializeUserAsync } from '../../serializers/user.js';
 import { emitToUsers, emitToVoiceRoom } from '../broadcast.js';
 import { voiceRoomChannel, type KyroSocket } from '../io.js';
+import { enterContext, leaveContext } from '../context.js';
 import { joinRoom, leaveRoom, roomMemberIds, roomParticipants, updateRoomState } from '../rooms.js';
 
 async function roomAccess(roomId: string, userId: string) {
@@ -36,6 +37,7 @@ export function registerRoomHandlers(socket: KyroSocket) {
 
     await joinRoom(roomId, userId);
     await socket.join(voiceRoomChannel(roomId));
+    await enterContext(userId, 'room');
 
     const user = await prisma.user.findUnique({ where: { id: userId }, select: publicUserSelect });
     const participants = await roomParticipants(roomId);
@@ -59,6 +61,7 @@ export function registerRoomHandlers(socket: KyroSocket) {
   socket.on('room:leave', async ({ roomId }) => {
     await leaveRoom(roomId, userId);
     await socket.leave(voiceRoomChannel(roomId));
+    await leaveContext(userId, 'room');
     emitToVoiceRoom(roomId, 'room:peer-left', { roomId, userId });
     emitToVoiceRoom(roomId, 'room:state', { roomId, participants: await roomParticipants(roomId) });
   });

@@ -4,6 +4,7 @@ import { logger } from '../../lib/logger.js';
 import { badRequest, forbidden, notFound } from '../../lib/errors.js';
 import { callInclude, serializeCall } from '../../serializers/call.js';
 import { emitToUsers } from '../../realtime/broadcast.js';
+import { enterContext, leaveContext } from '../../realtime/context.js';
 import { requireAccess } from '../conversations/access.js';
 import { createSystemMessage } from '../messages/service.js';
 import { notify } from '../notifications/service.js';
@@ -88,6 +89,7 @@ export async function startCall(
   });
 
   const call = await serializeCall(created);
+  await enterContext(userId, 'call');
   emitToUsers(members, 'call:incoming', { call });
 
   const label = input.kind === 'video' ? 'Videollamada entrante' : 'Llamada entrante';
@@ -135,6 +137,7 @@ export async function joinCall(userId: string, callId: string): Promise<Call> {
   if (row.status !== 'ongoing') {
     await prisma.call.update({ where: { id: callId }, data: { status: 'ongoing' } });
   }
+  await enterContext(userId, 'call');
 
   return emitCallUpdate(callId, 'call:updated');
 }
@@ -188,6 +191,7 @@ export async function hangupCall(userId: string, callId: string): Promise<Call |
     where: { callId, userId, leftAt: null },
     data: { leftAt: new Date() },
   });
+  await leaveContext(userId, 'call');
 
   const remaining = row.participants.filter(
     (participant) => participant.userId !== userId && participant.joinedAt && !participant.leftAt,
@@ -227,6 +231,10 @@ export async function endCall(
       data: { leftAt: endedAt },
     }),
   ]);
+
+  for (const participant of row.participants) {
+    await leaveContext(participant.userId, 'call');
+  }
 
   emitToUsers(await audienceOf(row.conversationId), 'call:ended', {
     callId,

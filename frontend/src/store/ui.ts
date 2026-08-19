@@ -2,6 +2,9 @@ import { create } from 'zustand';
 
 export type ToastKind = 'info' | 'success' | 'error';
 
+/** Diálogos globales de la aplicación. */
+export type ModalName = 'new-conversation' | 'saved-messages' | 'custom-status' | null;
+
 export interface Toast {
   id: string;
   kind: ToastKind;
@@ -25,6 +28,19 @@ interface UIState {
   searchOpen: boolean;
   openSearch: () => void;
   closeSearch: () => void;
+
+  /**
+   * Diálogos que se pueden abrir desde varios sitios (la lista, el paleta de
+   * comandos, un atajo). Viven aquí para que no dependan de quién los invoca.
+   */
+  modal: ModalName;
+  openModal: (name: Exclude<ModalName, null>) => void;
+  closeModal: () => void;
+
+  /** Perfil abierto en el panel flotante, por @usuario. */
+  profileUsername: string | null;
+  openProfile: (username: string) => void;
+  closeProfile: () => void;
 
   /** En móvil solo cabe un panel: se recuerda cuál está delante. */
   mobilePane: 'list' | 'content';
@@ -53,6 +69,14 @@ export const useUI = create<UIState>((set, get) => ({
   searchOpen: false,
   openSearch: () => set({ searchOpen: true }),
   closeSearch: () => set({ searchOpen: false }),
+
+  modal: null,
+  openModal: (name) => set({ modal: name, searchOpen: false }),
+  closeModal: () => set({ modal: null }),
+
+  profileUsername: null,
+  openProfile: (username) => set({ profileUsername: username, searchOpen: false }),
+  closeProfile: () => set({ profileUsername: null }),
 
   mobilePane: 'list',
   setMobilePane: (pane) => set({ mobilePane: pane }),

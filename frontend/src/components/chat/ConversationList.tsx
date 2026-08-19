@@ -24,8 +24,6 @@ import { IconButton } from '@/components/ui/Button';
 import { Badge, EmptyState, SkeletonList } from '@/components/ui/Feedback';
 import { Input } from '@/components/ui/Field';
 import { Menu, MenuItem, MenuSeparator, useMenu } from '@/components/ui/Menu';
-import { NewConversationModal } from './NewConversationModal';
-import { SavedMessagesModal } from './SavedMessagesModal';
 import { otherMember } from '@/lib/conversation';
 import styles from './ConversationList.module.css';
 
@@ -35,8 +33,7 @@ export function ConversationList({ activeId }: { activeId?: string }) {
   const loaded = useChat((state) => state.conversationsLoaded);
   const typing = useChat((state) => state.typing);
   const [query, setQuery] = useState('');
-  const [newOpen, setNewOpen] = useState(false);
-  const [savedOpen, setSavedOpen] = useState(false);
+  const openModal = useUI((state) => state.openModal);
   const menu = useMenu();
   const [menuTarget, setMenuTarget] = useState<Conversation | null>(null);
   const confirm = useUI((state) => state.confirm);
@@ -85,10 +82,10 @@ export function ConversationList({ activeId }: { activeId?: string }) {
       <header className={styles.header}>
         <span className={styles.title}>Mensajes</span>
         <span style={{ display: 'flex', gap: 2 }}>
-          <IconButton label="Mensajes guardados" onClick={() => setSavedOpen(true)}>
+          <IconButton label="Mensajes guardados" onClick={() => openModal('saved-messages')}>
             <Bookmark size={17} />
           </IconButton>
-          <IconButton label="Nueva conversación" onClick={() => setNewOpen(true)}>
+          <IconButton label="Nueva conversación" onClick={() => openModal('new-conversation')}>
             <MessageSquarePlus size={18} />
           </IconButton>
         </span>
@@ -204,8 +201,6 @@ export function ConversationList({ activeId }: { activeId?: string }) {
         </Menu>
       ) : null}
 
-      <NewConversationModal open={newOpen} onClose={() => setNewOpen(false)} />
-      <SavedMessagesModal open={savedOpen} onClose={() => setSavedOpen(false)} />
     </div>
   );
 }
