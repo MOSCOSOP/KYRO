@@ -83,6 +83,7 @@ async function fetchLastMessages(conversationIds: string[]) {
       createdAt: true,
       deletedAt: true,
       author: { select: { displayName: true } },
+      attachments: { take: 1, select: { kind: true, name: true } },
       _count: { select: { attachments: true } },
     },
   });

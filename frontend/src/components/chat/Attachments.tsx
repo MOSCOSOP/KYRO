@@ -4,7 +4,13 @@ import { Download, FileText, X } from 'lucide-react';
 import type { Attachment } from '@kyro/shared';
 import { fileSize } from '@/lib/format';
 import { IconButton } from '@/components/ui/Button';
+import { VoiceNote } from './VoiceNote';
 import styles from './Attachments.module.css';
+
+/** Las notas grabadas en KYRO llevan este nombre; el resto son audios sueltos. */
+function isVoiceNote(attachment: Attachment) {
+  return attachment.name.startsWith('mensaje-de-voz');
+}
 
 export function Attachments({ items }: { items: Attachment[] }) {
   const [preview, setPreview] = useState<Attachment | null>(null);
@@ -45,9 +51,24 @@ export function Attachments({ items }: { items: Attachment[] }) {
         <video key={video.id} className={styles.video} src={video.url} controls preload="metadata" />
       ))}
 
-      {audios.map((audio) => (
-        <audio key={audio.id} className={styles.audio} src={audio.url} controls preload="metadata" />
-      ))}
+      {/*
+        Una grabación de KYRO se escucha con su propio reproductor; un archivo
+        de audio que alguien adjunta se abre con el control del navegador, que
+        trae velocidad y descarga.
+      */}
+      {audios.map((audio) =>
+        isVoiceNote(audio) ? (
+          <VoiceNote key={audio.id} attachment={audio} />
+        ) : (
+          <audio
+            key={audio.id}
+            className={styles.audio}
+            src={audio.url}
+            controls
+            preload="metadata"
+          />
+        ),
+      )}
 
       {files.length > 0 ? (
         <div className={styles.grid}>

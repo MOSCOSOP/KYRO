@@ -45,9 +45,26 @@ export function previewText(conversation: Conversation, selfId: string) {
   if (last.deletedAt) return 'Mensaje eliminado';
   if (last.type === 'system' || last.type === 'call') return last.content;
   if (!last.content && last.attachmentCount > 0) {
-    return `${author}${last.attachmentCount > 1 ? `${last.attachmentCount} archivos` : 'Archivo adjunto'}`;
+    return `${author}${describeAttachment(last)}`;
   }
   return `${author}${last.content}`;
+}
+
+/** Qué se ve en la lista cuando un mensaje es solo un archivo. */
+function describeAttachment(last: NonNullable<Conversation['lastMessage']>) {
+  if (last.attachmentCount > 1) return `${last.attachmentCount} archivos`;
+  if (last.attachmentName?.startsWith('mensaje-de-voz')) return 'Mensaje de voz';
+
+  switch (last.attachmentKind) {
+    case 'image':
+      return 'Foto';
+    case 'video':
+      return 'Vídeo';
+    case 'audio':
+      return 'Audio';
+    default:
+      return 'Archivo';
+  }
 }
 
 /** Agrupa mensajes consecutivos del mismo autor en una ventana corta. */

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent } from 'react';
 import clsx from 'clsx';
-import { Megaphone, Paperclip, Send, Smile, X } from 'lucide-react';
+import { Megaphone, Mic, Paperclip, Send, Smile, Trash2, X } from 'lucide-react';
 import type { Attachment, Conversation } from '@kyro/shared';
 import { LIMITS, ROLE_RANK } from '@kyro/shared';
 import { uploadFile } from '@/lib/api';
 import { useChat } from '@/store/chat';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { useSession } from '@/store/session';
 import { toastError } from '@/store/ui';
 import { IconButton } from '@/components/ui/Button';
@@ -37,6 +38,7 @@ export function Composer({ conversation }: { conversation: Conversation }) {
   const [pending, setPending] = useState<PendingAttachment[]>([]);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const voice = useVoiceRecorder();
   const textarea = useRef<HTMLTextAreaElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -55,6 +57,12 @@ export function Composer({ conversation }: { conversation: Conversation }) {
   useEffect(() => {
     if (replyTo) textarea.current?.focus();
   }, [replyTo]);
+
+  // Si la grabación no arranca (sin permiso, sin micrófono), hay que decirlo:
+  // un botón que no hace nada es peor que un error.
+  useEffect(() => {
+    if (voice.error) toastError(new Error(voice.error));
+  }, [voice.error]);
 
   useEffect(() => {
     return () => {
@@ -101,19 +109,54 @@ export function Composer({ conversation }: { conversation: Conversation }) {
     });
   };
 
+  /** Envía la grabación como adjunto de audio, sin texto. */
+  const sendVoice = async () => {
+    const recording = await voice.stop();
+    if (!recording) return;
+
+    const extension = recording.mimeType.includes('mp4') ? 'm4a' : 'webm';
+    const file = new File([recording.blob], `mensaje-de-voz.${extension}`, {
+      type: recording.mimeType,
+    });
+
+    try {
+      const { token } = await uploadFile(file, {
+        scope: 'message',
+        durationMs: recording.durationMs,
+      });
+      await useChat.getState().sendMessage(conversation.id, {
+        content: '',
+        attachmentTokens: [token],
+      });
+    } catch (err) {
+      toastError(err, 'No se pudo enviar el mensaje de voz');
+    }
+  };
+
+  const discardVoice = async () => {
+    await voice.stop({ discard: true });
+  };
+
   const send = async () => {
     const content = draft.trim();
     const tokens = pending.map((item) => item.token).filter((token): token is string => Boolean(token));
     if (!content && tokens.length === 0) return;
     if (pending.some((item) => !item.token)) return; // Todavía subiendo.
 
-    try {
-      await useChat.getState().sendMessage(conversation.id, { content, attachmentTokens: tokens });
-      setPending([]);
-      textarea.current?.focus();
-    } catch (err) {
-      toastError(err, 'No se pudo enviar el mensaje');
-    }
+    // Los adjuntos ya subidos se muestran en el propio mensaje mientras sale.
+    const attachments = pending
+      .map((item) => item.attachment)
+      .filter((attachment): attachment is Attachment => Boolean(attachment));
+
+    setPending([]);
+    textarea.current?.focus();
+
+    // Un fallo no se avisa con un aviso flotante: el mensaje se queda en el
+    // hilo marcado como no enviado, que es donde el usuario está mirando.
+    await useChat
+      .getState()
+      .sendMessage(conversation.id, { content, attachmentTokens: tokens, attachments })
+      .catch(() => undefined);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -188,6 +231,31 @@ export function Composer({ conversation }: { conversation: Conversation }) {
         </div>
       ) : null}
 
+      {voice.recording ? (
+        <div className={clsx(styles.box, replyTo && styles.boxWithReply, styles.recording)}>
+          <IconButton label="Descartar grabación" danger onClick={() => void discardVoice()}>
+            <Trash2 size={18} />
+          </IconButton>
+
+          <span className={styles.recordDot} aria-hidden />
+          <span className={styles.recordTime}>{formatElapsed(voice.elapsed)}</span>
+
+          {/* La onda se dibuja con el nivel real del micrófono. */}
+          <span className={styles.wave} aria-hidden>
+            {voice.levels.map((level, index) => (
+              <span
+                key={index}
+                className={styles.waveBar}
+                style={{ transform: `scaleY(${Math.max(0.08, level)})` }}
+              />
+            ))}
+          </span>
+
+          <IconButton label="Enviar mensaje de voz" onClick={() => void sendVoice()}>
+            <Send size={18} />
+          </IconButton>
+        </div>
+      ) : (
       <div
         className={clsx(styles.box, replyTo && styles.boxWithReply, dragging && styles.dropzone)}
         onDragOver={(event) => {
@@ -239,17 +307,24 @@ export function Composer({ conversation }: { conversation: Conversation }) {
           >
             <Smile size={18} />
           </IconButton>
-          <IconButton
-            label="Enviar"
-            onClick={() => void send()}
-            disabled={
-              sending ||
-              (!draft.trim() && pending.length === 0) ||
-              pending.some((item) => !item.token)
-            }
-          >
-            <Send size={18} />
-          </IconButton>
+          {/*
+            El botón cambia según lo que haya escrito: con texto envía, sin
+            texto graba. Es un solo sitio para la acción principal, como espera
+            cualquiera que venga del móvil.
+          */}
+          {draft.trim() || pending.length > 0 ? (
+            <IconButton
+              label="Enviar"
+              onClick={() => void send()}
+              disabled={sending || pending.some((item) => !item.token)}
+            >
+              <Send size={18} />
+            </IconButton>
+          ) : (
+            <IconButton label="Grabar un mensaje de voz" onClick={() => void voice.start()}>
+              <Mic size={18} />
+            </IconButton>
+          )}
 
           {emojiOpen ? (
             <div className={styles.emojiPanel} role="listbox" aria-label="Emojis">
@@ -271,6 +346,13 @@ export function Composer({ conversation }: { conversation: Conversation }) {
           ) : null}
         </div>
       </div>
+      )}
     </div>
   );
+}
+
+/** m:ss para el contador de grabación. */
+function formatElapsed(ms: number) {
+  const seconds = Math.floor(ms / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }

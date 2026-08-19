@@ -126,6 +126,7 @@ export function serializePreview(
     createdAt: Date;
     deletedAt: Date | null;
     author?: { displayName: string } | null;
+    attachments?: { kind: string; name: string }[];
     _count?: { attachments: number };
   } | null,
 ): MessagePreview | null {
@@ -137,6 +138,8 @@ export function serializePreview(
     content: row.deletedAt ? '' : row.content,
     type: row.type as MessageType,
     attachmentCount: row._count?.attachments ?? 0,
+    attachmentKind: (row.attachments?.[0]?.kind as MessagePreview['attachmentKind']) ?? null,
+    attachmentName: row.attachments?.[0]?.name ?? null,
     createdAt: row.createdAt.toISOString(),
     deletedAt: row.deletedAt?.toISOString() ?? null,
   };

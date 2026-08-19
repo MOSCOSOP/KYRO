@@ -1,11 +1,13 @@
 import { memo, useRef, useState, type KeyboardEvent } from 'react';
 import clsx from 'clsx';
 import {
+  AlertCircle,
   Bookmark,
   BookmarkCheck,
   Check,
   CheckCheck,
   CheckSquare,
+  Clock,
   Copy,
   Forward,
   MoreHorizontal,
@@ -16,11 +18,11 @@ import {
   Reply,
   Trash2,
 } from 'lucide-react';
-import type { Conversation, Message } from '@kyro/shared';
+import type { Conversation } from '@kyro/shared';
 import { ROLE_RANK } from '@kyro/shared';
 import { parseMessageParts } from '@/lib/conversation';
 import { timeOf } from '@/lib/format';
-import { useChat } from '@/store/chat';
+import { useChat, type ThreadMessage } from '@/store/chat';
 import { toastError, toastOk, useUI } from '@/store/ui';
 import { Avatar } from '@/components/ui/Avatar';
 import { IconButton } from '@/components/ui/Button';
@@ -33,13 +35,13 @@ import styles from './MessageItem.module.css';
 export const QUICK_EMOJIS = ['👍', '❤️', '😂', '🎉', '🔥', '👀'];
 
 interface MessageItemProps {
-  message: Message;
+  message: ThreadMessage;
   conversation: Conversation;
   selfId: string;
   grouped: boolean;
   highlighted?: boolean;
   onJumpTo?: (messageId: string) => void;
-  onForward?: (message: Message) => void;
+  onForward?: (message: ThreadMessage) => void;
 }
 
 export const MessageItem = memo(function MessageItem({
@@ -140,8 +142,9 @@ export const MessageItem = memo(function MessageItem({
         selected && styles.selected,
         highlighted && styles.highlight,
         mentionsMe && !mine && styles.mentioned,
+        message.pending && styles.sending,
       )}
-      onContextMenu={menu.openAt}
+      onContextMenu={message.pending || message.failed ? undefined : menu.openAt}
       {...longPress}
       onClick={selecting ? () => chat.toggleSelected(message.id) : undefined}
       id={`msg-${message.id}`}
@@ -215,7 +218,12 @@ export const MessageItem = memo(function MessageItem({
               <p className={styles.text}>
                 <MessageText content={message.content} selfId={selfId} conversation={conversation} />
                 {message.editedAt ? <span className={styles.edited}>(editado)</span> : null}
-                {mine && conversation.type === 'direct' ? (
+                {message.pending ? (
+                  <span className={styles.receipts} title="Enviando">
+                    <Clock size={12} />
+                  </span>
+                ) : null}
+                {mine && !message.pending && !message.failed && conversation.type === 'direct' ? (
                   <span
                     className={clsx(
                       styles.receipts,
@@ -235,6 +243,32 @@ export const MessageItem = memo(function MessageItem({
           </>
         )}
 
+        {/* No llegó a salir: se queda a la vista, con la salida en la mano. */}
+        {message.failed ? (
+          <div className={styles.failed}>
+            <AlertCircle size={13} />
+            No se pudo enviar
+            <button
+              type="button"
+              className={styles.failedAction}
+              onClick={() =>
+                void chat
+                  .retryMessage(conversation.id, message.id)
+                  .catch(() => toastError(new Error('Sigue sin poder enviarse')))
+              }
+            >
+              Reintentar
+            </button>
+            <button
+              type="button"
+              className={styles.failedAction}
+              onClick={() => chat.discardMessage(conversation.id, message.id)}
+            >
+              Descartar
+            </button>
+          </div>
+        ) : null}
+
         {message.reactions.length > 0 ? (
           <div className={styles.reactions}>
             {message.reactions.map((reaction) => (
@@ -253,7 +287,7 @@ export const MessageItem = memo(function MessageItem({
         ) : null}
       </div>
 
-      {!message.deletedAt && !editing && !selecting ? (
+      {!message.deletedAt && !editing && !selecting && !message.pending && !message.failed ? (
         <div className={styles.hoverActions}>
           {QUICK_EMOJIS.slice(0, 3).map((emoji) => (
             <button

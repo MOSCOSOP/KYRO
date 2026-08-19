@@ -17,6 +17,14 @@ const upload = multer({
   limits: { fileSize: UPLOAD_LIMITS.video, files: 1 },
 });
 
+/**
+ * El navegador manda el tipo con parámetros («audio/webm;codecs=opus») al
+ * grabar audio o vídeo. Solo interesa el tipo base.
+ */
+function baseMime(mimeType: string) {
+  return mimeType.split(';')[0].trim().toLowerCase();
+}
+
 function classify(mimeType: string): AttachmentKind {
   if (ALLOWED_MIME.image.includes(mimeType as never)) return 'image';
   if (ALLOWED_MIME.video.includes(mimeType as never)) return 'video';
@@ -41,7 +49,8 @@ uploadsRouter.post(
     const file = req.file;
     if (!file) throw badRequest('No se recibió ningún archivo');
 
-    const kind = classify(file.mimetype);
+    const mime = baseMime(file.mimetype);
+    const kind = classify(mime);
     if (file.size > UPLOAD_LIMITS[kind]) {
       throw tooLarge(
         `Máximo ${Math.round(UPLOAD_LIMITS[kind] / (1024 * 1024))} MB para este tipo de archivo`,
@@ -53,9 +62,7 @@ uploadsRouter.post(
 
     // Los SVG se guardan como descarga: nunca se sirven como documento activo.
     const mimeType =
-      file.mimetype === 'image/svg+xml' && scope !== 'message'
-        ? 'application/octet-stream'
-        : file.mimetype;
+      mime === 'image/svg+xml' && scope !== 'message' ? 'application/octet-stream' : mime;
 
     const key = buildObjectKey(`${scope}/${userId}`, file.originalname || 'archivo');
     const stored = await storage.save({

@@ -3,6 +3,7 @@ import type { Conversation, Message, Paginated, PublicUser, Reaction } from '@ky
 import { TYPING_TIMEOUT_MS } from '@kyro/shared';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
+import { useSession } from './session';
 
 /**
  * Conversaciones y mensajes.
@@ -12,8 +13,23 @@ import { getSocket } from '@/lib/socket';
  * Los componentes solo leen y llaman acciones; aquí vive toda la lógica.
  */
 
+/**
+ * Un mensaje dentro del hilo. Es el del servidor más lo que solo existe en
+ * este navegador: si aún está saliendo, si falló y con qué datos reintentarlo.
+ */
+export interface ThreadMessage extends Message {
+  localId?: string;
+  pending?: boolean;
+  failed?: boolean;
+  draft?: {
+    content: string;
+    replyToId: string | null;
+    attachmentTokens: string[];
+  };
+}
+
 export interface Thread {
-  messages: Message[];
+  messages: ThreadMessage[];
   nextCursor: string | null;
   hasMore: boolean;
   loading: boolean;
@@ -54,8 +70,10 @@ interface ChatState {
   loadOlder: (id: string) => Promise<void>;
   sendMessage: (
     id: string,
-    input: { content: string; attachmentTokens?: string[] },
+    input: { content: string; attachmentTokens?: string[]; attachments?: Message['attachments'] },
   ) => Promise<Message>;
+  retryMessage: (conversationId: string, localId: string) => Promise<void>;
+  discardMessage: (conversationId: string, localId: string) => void;
   editMessage: (messageId: string, conversationId: string, content: string) => Promise<void>;
   deleteMessage: (messageId: string, conversationId: string) => Promise<void>;
   toggleReaction: (messageId: string, conversationId: string, emoji: string) => Promise<void>;
@@ -208,27 +226,113 @@ export const useChat = create<ChatState>((set, get) => ({
     });
   },
 
+  /**
+   * Envío optimista.
+   *
+   * El mensaje aparece en el hilo al instante, marcado como «enviando», y solo
+   * después viaja al servidor. Si falla —sin conexión, servidor caído— no se
+   * pierde: se queda visible como «no enviado» y se puede reintentar. Escribir
+   * y que el texto desaparezca en el aire es lo peor que puede hacer un chat.
+   */
   async sendMessage(id, input) {
-    const replyToId = get().replyTo[id]?.id ?? null;
-    set({ sending: { ...get().sending, [id]: true } });
+    const author = useSession.getState().user;
+    const replyTo = get().replyTo[id] ?? null;
+    const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const optimistic: ThreadMessage = {
+      id: localId,
+      localId,
+      pending: true,
+      conversationId: id,
+      author: author ?? null,
+      content: input.content,
+      type: 'text',
+      meta: null,
+      attachments: input.attachments ?? [],
+      reactions: [],
+      replyTo: replyTo
+        ? {
+            id: replyTo.id,
+            content: replyTo.content,
+            authorId: replyTo.author?.id ?? '',
+            authorName: replyTo.author?.displayName ?? '',
+            deletedAt: null,
+            attachmentCount: replyTo.attachments.length,
+          }
+        : null,
+      mentions: [],
+      editedAt: null,
+      deletedAt: null,
+      pinnedAt: null,
+      saved: false,
+      createdAt: new Date().toISOString(),
+      readBy: [],
+      draft: {
+        content: input.content,
+        replyToId: replyTo?.id ?? null,
+        attachmentTokens: input.attachmentTokens ?? [],
+      },
+    };
+
+    appendMessage(set, get, optimistic);
+    set({
+      sending: { ...get().sending, [id]: true },
+      drafts: { ...get().drafts, [id]: '' },
+      replyTo: { ...get().replyTo, [id]: null },
+    });
+
     try {
       const message = await api.post<Message>(`/conversations/${id}/messages`, {
         content: input.content,
-        replyToId,
+        replyToId: replyTo?.id ?? null,
         attachmentTokens: input.attachmentTokens ?? [],
       });
-      // El mensaje también llegará por WebSocket; insertar aquí evita el
-      // parpadeo de espera en la conexión del propio autor.
-      appendMessage(set, get, message);
-      set({
-        drafts: { ...get().drafts, [id]: '' },
-        replyTo: { ...get().replyTo, [id]: null },
-      });
+      // El servidor manda: su versión sustituye a la provisional.
+      swapMessage(set, get, id, localId, message);
       return message;
+    } catch (err) {
+      markFailed(set, get, id, localId);
+      throw err;
     } finally {
       set({ sending: { ...get().sending, [id]: false } });
       get().sendTyping(id, false);
     }
+  },
+
+  /** Reintenta un mensaje que no llegó a salir. */
+  async retryMessage(conversationId, localId) {
+    const thread = get().threads[conversationId];
+    const failed = thread?.messages.find((message) => message.id === localId);
+    if (!failed?.draft) return;
+
+    updateMessage(set, get, conversationId, localId, { pending: true, failed: false });
+
+    try {
+      const message = await api.post<Message>(`/conversations/${conversationId}/messages`, {
+        content: failed.draft.content,
+        replyToId: failed.draft.replyToId,
+        attachmentTokens: failed.draft.attachmentTokens,
+      });
+      swapMessage(set, get, conversationId, localId, message);
+    } catch (err) {
+      markFailed(set, get, conversationId, localId);
+      throw err;
+    }
+  },
+
+  /** Descarta un mensaje que nunca llegó a enviarse. */
+  discardMessage(conversationId, localId) {
+    const thread = get().threads[conversationId];
+    if (!thread) return;
+    set({
+      threads: {
+        ...get().threads,
+        [conversationId]: {
+          ...thread,
+          messages: thread.messages.filter((message) => message.id !== localId),
+        },
+      },
+    });
   },
 
   async editMessage(messageId, conversationId, content) {
@@ -517,7 +621,61 @@ export const useChat = create<ChatState>((set, get) => ({
 type Setter = (partial: Partial<ChatState>) => void;
 type Getter = () => ChatState;
 
-function appendMessage(set: Setter, get: Getter, message: Message) {
+/** Sustituye el mensaje provisional por el que devolvió el servidor. */
+function swapMessage(
+  set: Setter,
+  get: Getter,
+  conversationId: string,
+  localId: string,
+  message: Message,
+) {
+  const thread = get().threads[conversationId];
+  if (!thread) return;
+
+  // El mismo mensaje puede haber llegado ya por WebSocket: entonces el
+  // provisional simplemente desaparece, no se duplica.
+  const alreadyArrived = thread.messages.some((item) => item.id === message.id);
+
+  set({
+    threads: {
+      ...get().threads,
+      [conversationId]: {
+        ...thread,
+        messages: alreadyArrived
+          ? thread.messages.filter((item) => item.id !== localId)
+          : thread.messages.map((item) => (item.id === localId ? message : item)),
+      },
+    },
+  });
+}
+
+function updateMessage(
+  set: Setter,
+  get: Getter,
+  conversationId: string,
+  localId: string,
+  patch: Partial<ThreadMessage>,
+) {
+  const thread = get().threads[conversationId];
+  if (!thread) return;
+  set({
+    threads: {
+      ...get().threads,
+      [conversationId]: {
+        ...thread,
+        messages: thread.messages.map((item) =>
+          item.id === localId ? { ...item, ...patch } : item,
+        ),
+      },
+    },
+  });
+}
+
+function markFailed(set: Setter, get: Getter, conversationId: string, localId: string) {
+  updateMessage(set, get, conversationId, localId, { pending: false, failed: true });
+}
+
+function appendMessage(set: Setter, get: Getter, message: ThreadMessage) {
   const thread = get().threads[message.conversationId];
   if (!thread) return; // El hilo se cargará entero cuando se abra.
   if (thread.messages.some((item) => item.id === message.id)) return;

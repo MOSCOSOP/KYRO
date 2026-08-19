@@ -195,3 +195,62 @@
     padding: 0 var(--space-3) var(--space-3);
   }
 }
+
+/* ----------------------------- Mensaje de voz ------------------------------ */
+
+/*
+ * Grabando, el compositor se convierte en la propia grabación: tiempo, onda en
+ * movimiento y las dos únicas salidas posibles —descartar o enviar—.
+ */
+.recording {
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-color: var(--accent-border);
+}
+
+.recordDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--danger);
+  flex-shrink: 0;
+  animation: record-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes record-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.recordTime {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  min-width: 40px;
+}
+
+.wave {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  overflow: hidden;
+}
+
+.waveBar {
+  flex: 1;
+  min-width: 2px;
+  max-width: 4px;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--brand-gradient);
+  transform-origin: center;
+  transition: transform 90ms linear;
+}

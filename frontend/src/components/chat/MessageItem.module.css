@@ -313,3 +313,33 @@
 .selected:hover {
   background: var(--accent-soft);
 }
+
+/* ------------------------------ Estado de envío ---------------------------- */
+
+/* Mientras sale, el mensaje está algo apagado: se ve, pero aún no es un hecho. */
+.sending {
+  opacity: 0.6;
+}
+
+.failed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--danger);
+}
+
+.failedAction {
+  background: none;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--text-xs);
+  border: 1px solid var(--border);
+  transition: border-color var(--duration-fast) var(--ease);
+}
+
+.failedAction:hover {
+  border-color: var(--border-strong);
+}

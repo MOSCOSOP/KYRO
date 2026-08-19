@@ -139,6 +139,10 @@ export interface MessagePreview {
   content: string;
   type: MessageType;
   attachmentCount: number;
+  /** Clase del primer adjunto, para describir la vista previa sin abrirla. */
+  attachmentKind: AttachmentKind | null;
+  /** Nombre del primer adjunto: distingue una nota de voz de un audio suelto. */
+  attachmentName: string | null;
   createdAt: ISODate;
   deletedAt: ISODate | null;
 }
