@@ -8,6 +8,7 @@ import { useCommunities } from '@/store/communities';
 import { toastError, toastOk, useUI } from '@/store/ui';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button, IconButton } from '@/components/ui/Button';
+import { AccentPicker } from '@/components/ui/AccentPicker';
 import { Field, Input, Switch, Textarea } from '@/components/ui/Field';
 import { Loading } from '@/components/ui/Feedback';
 import { Modal } from '@/components/ui/Modal';
@@ -33,6 +34,7 @@ export function CommunitySettingsModal({
   const [name, setName] = useState(community.name);
   const [description, setDescription] = useState(community.description ?? '');
   const [isPublic, setIsPublic] = useState(community.isPublic);
+  const [accent, setAccent] = useState<string | null>(community.accentColor);
   const [muted, setLocalMuted] = useState(community.muted);
   const [busy, setBusy] = useState(false);
 
@@ -45,6 +47,7 @@ export function CommunitySettingsModal({
     setName(community.name);
     setDescription(community.description ?? '');
     setIsPublic(community.isPublic);
+    setAccent(community.accentColor);
     setLocalMuted(community.muted);
     void useCommunities.getState().loadMembers(community.id).catch(() => undefined);
   }, [open, community]);
@@ -57,6 +60,7 @@ export function CommunitySettingsModal({
           name: name.trim(),
           description: description.trim() || null,
           isPublic,
+          accentColor: accent,
         });
       }
       if (muted !== community.muted) await setMuted(community.id, muted);
@@ -135,6 +139,18 @@ export function CommunitySettingsModal({
           />
         )}
       </Field>
+
+      {canEdit ? (
+        <Field label="Color de la comunidad">
+          {() => (
+            <AccentPicker
+              label="Color de la comunidad"
+              value={accent}
+              onChange={setAccent}
+            />
+          )}
+        </Field>
+      ) : null}
 
       {canEdit ? (
         <Switch

@@ -1,0 +1,45 @@
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.swatch {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  cursor: pointer;
+  transition:
+    transform var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+.swatch:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.swatch:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.swatch:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* El primero no es un color: es volver al filo de la marca. */
+.brand {
+  background: var(--brand-gradient);
+}
+
+.selected {
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 3px rgba(255, 255, 255, 0.5);
+}

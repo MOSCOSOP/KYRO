@@ -51,6 +51,12 @@
   height: 100%;
 }
 
+.emptyMark {
+  opacity: 0.28;
+  filter: saturate(0.7);
+  animation: kyro-fade-in var(--duration-slow) var(--ease);
+}
+
 .emptyIcon {
   display: grid;
   place-items: center;

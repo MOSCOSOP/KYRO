@@ -57,6 +57,7 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
   const [pinned, setPinned] = useState<Message[]>([]);
   const [forwarding, setForwarding] = useState<Message[]>([]);
   const selection = useChat((state) => state.selection);
+  const [scrolled, setScrolled] = useState(false);
 
   // Carga del hilo y suscripción en tiempo real.
   useEffect(() => {
@@ -199,7 +200,7 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
         </div>
       ) : null}
 
-      <header className={styles.header}>
+      <header className={clsx(styles.header, scrolled && styles.headerRaised)}>
         <IconButton
           label="Volver"
           className={styles.back}
@@ -290,7 +291,11 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
 
       <div className={clsx(styles.body, infoOpen && !compact && styles.bodyWithPanel)}>
         <div className={styles.thread}>
-          <MessageList conversation={conversation} onForward={(message) => setForwarding([message])} />
+          <MessageList
+            conversation={conversation}
+            onForward={(message) => setForwarding([message])}
+            onScrolled={setScrolled}
+          />
           <Composer conversation={conversation} />
         </div>
         {infoOpen && !compact ? (

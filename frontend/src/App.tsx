@@ -38,7 +38,11 @@ export function App() {
   useRealtime();
   useShortcuts();
   useInitialData(Boolean(user));
-  useAppearance(user?.preferences.reducedMotion ?? false, user?.preferences.theme ?? 'deep');
+  useAppearance(
+    user?.preferences.reducedMotion ?? false,
+    user?.preferences.theme ?? 'deep',
+    user?.accentColor ?? null,
+  );
 
   if (status === 'loading') {
     return (
@@ -88,8 +92,22 @@ export function App() {
   );
 }
 
-/** Movimiento y tema se aplican en la raíz del documento, no por componente. */
-function useAppearance(reduced: boolean, theme: string) {
+/*
+ * Variantes del acento personal. Se derivan del color elegido en lugar de
+ * guardarse, para que una paleta nueva no obligue a tocar nada más.
+ */
+const ACCENT_VARS: [string, (color: string) => string][] = [
+  ['--accent', (color) => color],
+  ['--accent-hover', (color) => `color-mix(in srgb, ${color} 82%, #ffffff)`],
+  ['--accent-active', (color) => `color-mix(in srgb, ${color} 88%, #000000)`],
+  ['--accent-soft', (color) => `color-mix(in srgb, ${color} 14%, transparent)`],
+  ['--accent-softer', (color) => `color-mix(in srgb, ${color} 7%, transparent)`],
+  ['--accent-border', (color) => `color-mix(in srgb, ${color} 38%, transparent)`],
+  ['--glow-accent', (color) => `0 0 24px color-mix(in srgb, ${color} 22%, transparent)`],
+];
+
+/** Movimiento, tema y color propio se aplican en la raíz, no por componente. */
+function useAppearance(reduced: boolean, theme: string, accent: string | null) {
   useEffect(() => {
     document.documentElement.dataset.reducedMotion = reduced ? 'true' : 'false';
   }, [reduced]);
@@ -101,6 +119,18 @@ function useAppearance(reduced: boolean, theme: string) {
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute('content', theme === 'soft' ? '#0F1218' : '#080A0E');
   }, [theme]);
+
+  /*
+   * El color del usuario sustituye al acento en toda la aplicación. La marca
+   * (el degradado del logotipo, el acceso) no se toca: eso sigue siendo KYRO.
+   */
+  useEffect(() => {
+    const root = document.documentElement.style;
+    for (const [name, derive] of ACCENT_VARS) {
+      if (accent) root.setProperty(name, derive(accent));
+      else root.removeProperty(name);
+    }
+  }, [accent]);
 }
 
 /** Datos que la aplicación necesita nada más entrar. */

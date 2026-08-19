@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import type { CSSProperties, ReactNode } from 'react';
+import { KyroMark } from '@/components/brand/KyroMark';
 import styles from './Feedback.module.css';
 
 export function Spinner({ size = 18 }: { size?: number }) {
@@ -61,6 +62,10 @@ export function SkeletonList({ rows = 6 }: { rows?: number }) {
   );
 }
 
+/**
+ * Estado vacío. Sin icono propio aparece la marca muy apagada: llena el hueco
+ * sin decir nada que el usuario tenga que leer.
+ */
 export function EmptyState({
   icon,
   title,
@@ -74,7 +79,13 @@ export function EmptyState({
 }) {
   return (
     <div className={styles.empty}>
-      {icon ? <span className={styles.emptyIcon}>{icon}</span> : null}
+      {icon ? (
+        <span className={styles.emptyIcon}>{icon}</span>
+      ) : (
+        <span className={styles.emptyMark} aria-hidden>
+          <KyroMark size={40} />
+        </span>
+      )}
       <span className={styles.emptyTitle}>{title}</span>
       {description ? <p className={styles.emptyText}>{description}</p> : null}
       {action}

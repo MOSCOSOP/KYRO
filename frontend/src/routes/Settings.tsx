@@ -28,6 +28,7 @@ import { Workspace } from '@/components/layout/AppShell';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Field, Input, Switch, Textarea } from '@/components/ui/Field';
+import { AccentPicker } from '@/components/ui/AccentPicker';
 import { Segmented, SettingRow } from '@/components/ui/Segmented';
 import { useIsCompact } from '@/hooks/useMediaQuery';
 import styles from './Settings.module.css';
@@ -433,6 +434,20 @@ function AppearanceSection() {
   return (
     <>
       <div className={styles.block}>
+        <div className={styles.colorBlock}>
+          <span className={styles.colorTitle}>Tu color</span>
+          <p className={styles.colorHint}>
+            Tiñe los detalles activos de la interfaz y el filo de tu avatar.
+          </p>
+          <AccentPicker
+            label="Tu color"
+            value={user.accentColor ?? null}
+            onChange={(value) =>
+              void updateProfile({ accentColor: value }).catch((err) => toastError(err))
+            }
+          />
+        </div>
+
         <SettingRow
           title="Profundidad"
           hint="El mismo KYRO, con el fondo más hondo o algo más suave."

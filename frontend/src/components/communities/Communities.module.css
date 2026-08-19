@@ -6,6 +6,7 @@
 }
 
 .header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -14,6 +15,19 @@
   padding: 0 var(--space-2) 0 var(--space-4);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+/* Un velo del color de la comunidad, tan diluido que solo se nota al cambiar. */
+.header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--community-accent, transparent) 10%, transparent),
+    transparent
+  );
 }
 
 .headerText {
@@ -61,6 +75,7 @@
 }
 
 .item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -84,6 +99,22 @@
 .itemActive:hover {
   background: var(--surface-3);
   color: var(--text);
+  box-shadow: var(--inset-top);
+}
+
+/*
+ * El canal activo lleva un filo con el color de la comunidad, o con el de KYRO
+ * si no tiene uno propio. Es el único sitio del panel donde ese color manda.
+ */
+.itemActive::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  bottom: 7px;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: var(--community-accent, var(--accent));
 }
 
 .itemName {

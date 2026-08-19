@@ -89,8 +89,18 @@ export function ChannelPanel({
     void useVoice.getState().join({ roomId, roomName, communityId: community.id, selfId });
   };
 
+  /*
+   * Cada comunidad puede tener su color. Se inyecta como variable local, de
+   * modo que el canal activo y los detalles del panel se tiñen con él sin que
+   * ningún componente tenga que saber de dónde sale.
+   */
+  const accent = community.accentColor;
+
   return (
-    <div className={styles.panel}>
+    <div
+      className={styles.panel}
+      style={accent ? ({ '--community-accent': accent } as React.CSSProperties) : undefined}
+    >
       <header className={styles.header}>
         <Link to="/comunidades" aria-label="Todas las comunidades">
           <IconButton label="Todas las comunidades" size="sm">

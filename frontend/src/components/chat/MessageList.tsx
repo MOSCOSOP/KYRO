@@ -13,9 +13,12 @@ import styles from './MessageList.module.css';
 export function MessageList({
   conversation,
   onForward,
+  onScrolled,
 }: {
   conversation: Conversation;
   onForward?: (message: Message) => void;
+  /** El hilo se ha movido del principio: la cabecera gana relieve. */
+  onScrolled?: (scrolled: boolean) => void;
 }) {
   const selfId = useSession((state) => state.user?.id ?? '');
   const thread = useChat((state) => state.threads[conversation.id]);
@@ -48,6 +51,7 @@ export function MessageList({
 
     const distanceToBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
     setAtBottom(distanceToBottom < 80);
+    onScrolled?.(element.scrollTop > 8);
 
     if (element.scrollTop < 320 && thread?.hasMore && !thread.loading) {
       previousHeight.current = element.scrollHeight;
@@ -64,7 +68,7 @@ export function MessageList({
         })
         .catch(() => undefined);
     }
-  }, [conversation.id, thread?.hasMore, thread?.loading]);
+  }, [conversation.id, thread?.hasMore, thread?.loading, onScrolled]);
 
   const jumpTo = useCallback((messageId: string) => {
     const target = document.getElementById(`msg-${messageId}`);

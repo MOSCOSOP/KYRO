@@ -142,6 +142,7 @@ export const MessageItem = memo(function MessageItem({
         selected && styles.selected,
         highlighted && styles.highlight,
         mentionsMe && !mine && styles.mentioned,
+        mine && styles.mine,
         message.pending && styles.sending,
       )}
       onContextMenu={message.pending || message.failed ? undefined : menu.openAt}

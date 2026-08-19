@@ -7,8 +7,17 @@
   position: relative;
   display: flex;
   gap: var(--space-3);
-  padding: 2px var(--space-5);
-  transition: background var(--duration-fast) var(--ease);
+  /*
+   * El resalte no llega a los bordes de la ventana: es una banda redondeada
+   * dentro del hilo. Ocupa lo mismo, pero se lee como un objeto y no como una
+   * fila de tabla.
+   */
+  padding: 3px var(--space-4);
+  margin: 0 var(--space-2);
+  border-radius: var(--radius);
+  transition:
+    background var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
   animation: kyro-message-in var(--duration) var(--ease);
 }
 
@@ -27,6 +36,27 @@
   background: var(--surface);
 }
 
+/*
+ * Lo propio se distingue por un filo tenue a la izquierda, no por una burbuja
+ * al otro lado: el hilo sigue siendo una columna legible y aun así se ve de un
+ * vistazo qué has escrito tú.
+ */
+.mine::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  opacity: 0.28;
+}
+
+.mine:hover::after {
+  opacity: 0.5;
+}
+
 .rowFirst {
   margin-top: var(--space-3);
 }
@@ -37,7 +67,7 @@
 
 .mentioned {
   background: var(--accent-softer);
-  box-shadow: inset 2px 0 0 var(--accent);
+  box-shadow: inset 2px 0 0 var(--accent), var(--inset-top);
 }
 
 .avatarSlot {
@@ -194,6 +224,7 @@
 }
 
 .reaction {
+  animation: kyro-pop-in var(--duration) var(--ease-pop);
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -306,8 +337,8 @@
 }
 
 .selected {
-  background: var(--accent-softer);
-  box-shadow: inset 2px 0 0 var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
 }
 
 .selected:hover {
