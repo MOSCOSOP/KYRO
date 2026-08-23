@@ -89,6 +89,8 @@ export function Activity() {
     <Workspace>
       <div className={styles.page}>
         <header className={styles.header}>
+          {/* La cabecera se alinea con la columna de la lista, no con la ventana. */}
+          <div className={styles.headerInner}>
           <span className={styles.title}>Actividad</span>
 
           <span className={styles.headerActions}>
@@ -128,6 +130,7 @@ export function Activity() {
               <Trash2 size={17} />
             </IconButton>
           </span>
+          </div>
         </header>
 
         <div className={styles.list}>
@@ -182,6 +185,7 @@ export function Activity() {
                         </div>
 
                         <span className={styles.stamp}>{relative(notification.createdAt)}</span>
+                        <span className={styles.rowActions}>
                         <IconButton
                           label="Descartar"
                           size="sm"
@@ -194,6 +198,7 @@ export function Activity() {
                         >
                           <Trash2 size={14} />
                         </IconButton>
+                        </span>
                       </div>
                     );
                   })}

@@ -33,6 +33,33 @@
     background var(--duration-fast) var(--ease);
 }
 
+/* Desplegable: sin la flecha del sistema, con la nuestra encima. */
+.selectWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+}
+
+.select {
+  appearance: none;
+  padding-right: var(--space-7);
+  font: inherit;
+  cursor: pointer;
+}
+
+.select option {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.selectArrow {
+  position: absolute;
+  right: var(--space-3);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
 .control::placeholder {
   color: var(--text-tertiary);
 }

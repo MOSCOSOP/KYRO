@@ -3,7 +3,7 @@ import type { CommunityDetail } from '@kyro/shared';
 import { useCommunities } from '@/store/communities';
 import { toastError, toastOk } from '@/store/ui';
 import { Button } from '@/components/ui/Button';
-import { Field, Input, Textarea } from '@/components/ui/Field';
+import { Field, Input, Select, Textarea } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 
 function defaultStart() {
@@ -101,27 +101,14 @@ export function CreateEventModal({
       {community.rooms.length > 0 ? (
         <Field label="Dónde" hint="Opcional: una sala de la comunidad.">
           {(id) => (
-            <select
-              id={id}
-              value={roomId}
-              onChange={(event) => setRoomId(event.target.value)}
-              style={{
-                width: '100%',
-                height: 38,
-                padding: '0 12px',
-                background: 'var(--surface-2)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                color: 'var(--text)',
-              }}
-            >
+            <Select id={id} value={roomId} onChange={(event) => setRoomId(event.target.value)}>
               <option value="">Sin sala</option>
               {community.rooms.map((room) => (
                 <option key={room.id} value={room.id}>
                   {room.name}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
         </Field>
       ) : null}

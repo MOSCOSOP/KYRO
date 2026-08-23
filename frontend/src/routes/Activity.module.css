@@ -8,12 +8,26 @@
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
   height: var(--header-height);
-  padding: 0 var(--space-5);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+/*
+ * El título y los filtros viven en la misma columna que la lista. Una cabecera
+ * pegada al borde de la ventana sobre un contenido centrado es lo que hace que
+ * una pantalla parezca montada a trozos.
+ */
+.headerInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  /* Hasta el borde de una fila: la sangría de la lista más la del elemento. */
+  padding: 0 calc(var(--space-4) + var(--space-3));
 }
 
 .title {
@@ -25,35 +39,72 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--space-4) var(--space-4) var(--space-10);
+  padding: var(--space-2) var(--space-4) var(--space-10);
   max-width: 760px;
   width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
 }
 
+/*
+ * Filas, no tarjetas. Diez cajas con borde apiladas es lo que hace que una
+ * lista parezca una plantilla; una sola superficie con separaciones finas se
+ * lee de un vistazo y deja que el contenido mande.
+ */
 .item {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius);
-  background: var(--surface);
-  border: 1px solid var(--border);
   text-align: left;
   width: 100%;
-  transition: border-color var(--duration-fast) var(--ease);
+  transition: background var(--duration-fast) var(--ease);
 }
 
-.item:hover {
-  border-color: var(--border-strong);
+/* Separación fina, sangrada hasta donde empieza el texto. */
+.item + .item::before {
+  content: '';
+  position: absolute;
+  left: calc(38px + var(--space-3) * 2);
+  right: var(--space-3);
+  top: 0;
+  height: 1px;
+  background: var(--border);
 }
 
-.unread {
-  background: var(--accent-softer);
-  border-color: var(--accent-border);
+.item:hover,
+.item:focus-within {
+  background: var(--surface-2);
+}
+
+/* Al pintarse la fila, la línea que la separa de la anterior sobra. */
+.item:hover::before,
+.item:focus-within::before,
+.item:hover + .item::before,
+.item:focus-within + .item::before {
+  opacity: 0;
+}
+
+/*
+ * Sin leer: un filo, no un fondo de color. El aviso se distingue sin que la
+ * lista se convierta en un semáforo.
+ */
+.unread::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+.unread .itemTitle {
+  font-weight: var(--weight-medium);
 }
 
 .icon {
@@ -97,6 +148,45 @@
   flex-shrink: 0;
 }
 
+/*
+ * Las acciones de una fila son lo menos frecuente que hay en ella: con ratón se
+ * descubren al apuntarla, y donde solo hay dedo se quedan visibles, porque no
+ * existe «apuntar».
+ */
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rowActions {
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease);
+  }
+
+  .item:hover .rowActions,
+  .item:focus-within .rowActions {
+    opacity: 1;
+  }
+}
+
+/* El icono de la llamada acompaña al texto; no compite con él. */
+.callIcon {
+  display: inline;
+  vertical-align: -1px;
+  color: var(--text-tertiary);
+}
+
+/*
+ * Lo que no se atendió se dice con una palabra, no con un icono rojo. Y el rojo
+ * va rebajado: es un registro de llamadas, no una alarma.
+ */
+.missed {
+  color: color-mix(in srgb, var(--danger) 65%, var(--text-tertiary));
+}
+
 .more {
   display: grid;
   place-items: center;
@@ -125,10 +215,13 @@
 @media (max-width: 640px) {
   .header {
     height: auto;
+    padding: var(--space-3) 0;
+  }
+
+  .headerInner {
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-3);
-    padding: var(--space-3) var(--space-4);
   }
 
   .headerActions {

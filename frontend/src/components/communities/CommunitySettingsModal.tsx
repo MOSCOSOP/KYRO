@@ -9,7 +9,7 @@ import { toastError, toastOk, useUI } from '@/store/ui';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button, IconButton } from '@/components/ui/Button';
 import { AccentPicker } from '@/components/ui/AccentPicker';
-import { Field, Input, Switch, Textarea } from '@/components/ui/Field';
+import { Field, Input, Select, Switch, Textarea } from '@/components/ui/Field';
 import { Loading } from '@/components/ui/Feedback';
 import { Modal } from '@/components/ui/Modal';
 import styles from './Communities.module.css';
@@ -182,22 +182,17 @@ export function CommunitySettingsModal({
               </span>
 
               {canManageRoles && outranks(role, member.role) ? (
-                <select
-                  value={member.role}
-                  onChange={(event) => void changeRole(member, event.target.value as MemberRole)}
-                  aria-label={`Rol de ${member.user.displayName}`}
-                  style={{
-                    height: 30,
-                    background: 'var(--surface-2)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius-sm)',
-                    color: 'var(--text)',
-                  }}
-                >
-                  <option value="member">Miembro</option>
-                  <option value="moderator">Moderador</option>
-                  <option value="admin">Administrador</option>
-                </select>
+                <span className={styles.roleSelect}>
+                  <Select
+                    value={member.role}
+                    onChange={(event) => void changeRole(member, event.target.value as MemberRole)}
+                    aria-label={`Rol de ${member.user.displayName}`}
+                  >
+                    <option value="member">Miembro</option>
+                    <option value="moderator">Moderador</option>
+                    <option value="admin">Administrador</option>
+                  </Select>
+                </span>
               ) : null}
 
               {can(role, 'member.kick') && outranks(role, member.role) ? (

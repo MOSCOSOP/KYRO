@@ -38,7 +38,9 @@ export function Calls() {
     <Workspace>
       <div className={styles.page}>
         <header className={styles.header}>
-          <span className={styles.title}>Llamadas</span>
+          <div className={styles.headerInner}>
+            <span className={styles.title}>Llamadas</span>
+          </div>
         </header>
 
         <div className={styles.list}>
@@ -72,27 +74,27 @@ export function Calls() {
                   >
                     <span className={styles.itemTitle}>{other.displayName}</span>
                     <span className={styles.itemBody}>
-                      <Icon
-                        size={12}
-                        style={{
-                          display: 'inline',
-                          verticalAlign: '-1px',
-                          color: missed ? 'var(--danger)' : undefined,
-                        }}
-                      />{' '}
+                      <Icon size={12} className={styles.callIcon} />{' '}
                       {call.kind === 'video' ? 'Videollamada' : 'Llamada'}
                       {call.durationMs ? ` · ${duration(call.durationMs)}` : ''}
-                      {missed ? ' · sin respuesta' : ''}
+                      {missed ? (
+                        <>
+                          {' · '}
+                          <span className={styles.missed}>sin respuesta</span>
+                        </>
+                      ) : null}
                     </span>
                   </div>
 
                   <span className={styles.stamp}>{relative(call.startedAt)}</span>
-                  <IconButton label="Llamar" onClick={() => callAgain(call, 'audio')}>
-                    <Phone size={16} />
-                  </IconButton>
-                  <IconButton label="Videollamada" onClick={() => callAgain(call, 'video')}>
-                    <Video size={16} />
-                  </IconButton>
+                  <span className={styles.rowActions}>
+                    <IconButton label="Llamar" onClick={() => callAgain(call, 'audio')}>
+                      <Phone size={16} />
+                    </IconButton>
+                    <IconButton label="Videollamada" onClick={() => callAgain(call, 'video')}>
+                      <Video size={16} />
+                    </IconButton>
+                  </span>
                 </div>
               );
             })

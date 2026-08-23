@@ -44,7 +44,12 @@ export function SettingRow({
         <span className={styles.title}>{title}</span>
         {hint ? <span className={styles.hint}>{hint}</span> : null}
       </span>
-      {children}
+      {/*
+        Todos los controles comparten ancho, así que sus bordes izquierdos caen
+        en la misma línea aunque las etiquetas midan distinto. Es la diferencia
+        entre una lista de ajustes y una columna desalineada.
+      */}
+      <span className={styles.control}>{children}</span>
     </div>
   );
 }

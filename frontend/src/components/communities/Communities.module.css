@@ -294,6 +294,12 @@
   gap: var(--space-2);
 }
 
+/* El desplegable de rol no necesita el ancho de un campo de formulario. */
+.roleSelect {
+  width: 150px;
+  flex-shrink: 0;
+}
+
 .memberCard {
   display: flex;
   align-items: center;

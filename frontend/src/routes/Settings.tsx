@@ -27,7 +27,7 @@ import { toastError, toastOk, useUI } from '@/store/ui';
 import { Workspace } from '@/components/layout/AppShell';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button, IconButton } from '@/components/ui/Button';
-import { Field, Input, Switch, Textarea } from '@/components/ui/Field';
+import { Field, Input, Select, Switch, Textarea } from '@/components/ui/Field';
 import { AccentPicker } from '@/components/ui/AccentPicker';
 import { Segmented, SettingRow } from '@/components/ui/Segmented';
 import { useIsCompact } from '@/hooks/useMediaQuery';
@@ -589,8 +589,7 @@ function MediaSection() {
     <>
       <div className={styles.block}>
         <SettingRow title="Micrófono" hint="Se usará en llamadas y salas de voz.">
-          <select
-            className={styles.select}
+          <Select
             value={preferred.audioInput ?? ''}
             onChange={(event) => choose('audioInput', event.target.value)}
             aria-label="Micrófono"
@@ -601,11 +600,11 @@ function MediaSection() {
                 {device.label}
               </option>
             ))}
-          </select>
+          </Select>
         </SettingRow>
 
         <SettingRow title="Nivel de entrada" hint="Habla para comprobar que se te oye.">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', maxWidth: 280 }}>
+          <div className={styles.levelRow}>
             <div className={styles.meter}>
               <span className={styles.meterFill} style={{ transform: `scaleX(${level})` }} />
             </div>
@@ -618,8 +617,7 @@ function MediaSection() {
 
       <div className={styles.block}>
         <SettingRow title="Cámara" hint="La que se abre al activar vídeo.">
-          <select
-            className={styles.select}
+          <Select
             value={preferred.videoInput ?? ''}
             onChange={(event) => choose('videoInput', event.target.value)}
             aria-label="Cámara"
@@ -630,7 +628,7 @@ function MediaSection() {
                 {device.label}
               </option>
             ))}
-          </select>
+          </Select>
         </SettingRow>
       </div>
 

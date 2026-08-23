@@ -120,6 +120,13 @@
   color: var(--text-tertiary);
 }
 
+.levelRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+}
+
 .colorBlock {
   display: flex;
   flex-direction: column;

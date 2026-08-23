@@ -3,9 +3,11 @@ import {
   useId,
   type InputHTMLAttributes,
   type ReactNode,
+  type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react';
 import clsx from 'clsx';
+import { ChevronDown } from 'lucide-react';
 import styles from './Field.module.css';
 
 interface FieldProps {
@@ -61,6 +63,26 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     </span>
   );
 });
+
+/**
+ * Desplegable con la misma piel que el resto de campos.
+ *
+ * Un <select> sin vestir es de las cosas que más delatan una interfaz montada
+ * deprisa: trae su propia tipografía, su propio alto y una flecha del sistema
+ * que no se parece a nada más de la pantalla.
+ */
+export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
+  function Select({ className, children, ...rest }, ref) {
+    return (
+      <span className={styles.selectWrap}>
+        <select ref={ref} className={clsx(styles.control, styles.select, className)} {...rest}>
+          {children}
+        </select>
+        <ChevronDown size={14} className={styles.selectArrow} aria-hidden />
+      </span>
+    );
+  },
+);
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   invalid?: boolean;
