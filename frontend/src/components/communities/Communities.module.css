@@ -214,7 +214,7 @@
 }
 
 .banner {
-  height: 140px;
+  height: 132px;
   background: linear-gradient(120deg, var(--surface-2), var(--surface-3));
   border-bottom: 1px solid var(--border);
 }
@@ -228,10 +228,43 @@
   gap: var(--space-6);
 }
 
+/*
+ * El avatar monta sobre el banner. Con la foto empezando justo donde acaba la
+ * franja, la cabecera se lee como dos piezas pegadas; montándola, como una.
+ */
 .overviewHead {
   display: flex;
   align-items: flex-start;
   gap: var(--space-4);
+  margin-top: -46px;
+}
+
+.overviewHead > :first-child {
+  flex-shrink: 0;
+}
+
+/*
+ * El filo del fondo recorta la foto contra el banner. Va sobre la imagen, no
+ * sobre su contenedor: si no, el halo sale cuadrado alrededor de una foto
+ * redonda.
+ */
+.overviewHead > :first-child > * {
+  box-shadow: 0 0 0 4px var(--bg);
+}
+
+/* La acción de la cabecera baja con el nombre, no se queda sobre la franja. */
+.overviewAction {
+  display: flex;
+  align-items: center;
+  padding-top: 52px;
+  flex-shrink: 0;
+}
+
+/* El nombre queda por debajo de la franja, no encima de ella. */
+.overviewIdentity {
+  flex: 1;
+  min-width: 0;
+  padding-top: 52px;
 }
 
 .overviewTitle {

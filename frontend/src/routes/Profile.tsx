@@ -128,7 +128,7 @@ export function Profile() {
         <div className={styles.overviewInner}>
           <div className={styles.overviewHead}>
             <Avatar user={profile.user} size="xl" presence />
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className={styles.overviewIdentity}>
               <h1 className={styles.overviewTitle}>{profile.user.displayName}</h1>
               <p className={styles.overviewMeta}>
                 @{profile.user.username}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarDays, Check, Hash, Megaphone, UserPlus, Users } from 'lucide-react';
+import { CalendarDays, Check, Hash, Megaphone, UserPlus } from 'lucide-react';
 import type { CommunityDetail } from '@kyro/shared';
 import { ROLE_LABEL, can } from '@kyro/shared';
 import { eventStamp } from '@/lib/format';
@@ -44,7 +44,7 @@ export function CommunityOverview({ community }: { community: CommunityDetail })
       <div className={styles.overviewInner}>
         <div className={styles.overviewHead}>
           <Avatar name={community.name} src={community.iconUrl} size="xl" square />
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className={styles.overviewIdentity}>
             <h1 className={styles.overviewTitle}>{community.name}</h1>
             <p className={styles.overviewMeta}>
               {community.memberCount} miembros · {community.channels.length} canales ·{' '}
@@ -52,9 +52,11 @@ export function CommunityOverview({ community }: { community: CommunityDetail })
             </p>
           </div>
           {can(role, 'member.invite') ? (
-            <Button icon={<UserPlus size={16} />} onClick={() => setInviteOpen(true)}>
-              Invitar
-            </Button>
+            <span className={styles.overviewAction}>
+              <Button icon={<UserPlus size={16} />} onClick={() => setInviteOpen(true)}>
+                Invitar
+              </Button>
+            </span>
           ) : null}
         </div>
 
@@ -133,9 +135,7 @@ export function CommunityOverview({ community }: { community: CommunityDetail })
         </section>
 
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>
-            <Users size={16} style={{ display: 'inline', verticalAlign: '-2px' }} /> Miembros
-          </h2>
+          <h2 className={styles.sectionTitle}>Miembros</h2>
           {!members ? (
             <Loading />
           ) : (
