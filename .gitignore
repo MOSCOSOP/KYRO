@@ -9,9 +9,11 @@ build/
 backend/prisma/*.db
 backend/prisma/*.db-journal
 backend/prisma/schema.dev.prisma
+backend/prisma/schema.test.prisma
 
 # Archivos subidos con el driver local
 backend/storage/
+backend/storage-test/
 
 .DS_Store
 Thumbs.db

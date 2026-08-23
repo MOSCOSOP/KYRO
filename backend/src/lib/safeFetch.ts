@@ -38,9 +38,17 @@ function isPrivateAddress(address: string) {
     if (value === '::' || value === '::1') return true;
     if (value.startsWith('fe80')) return true; // enlace local
     if (/^f[cd]/.test(value)) return true; // única local
-    // IPv4 empotrada: ::ffff:10.0.0.1
-    const mapped = value.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    if (mapped) return isPrivateAddress(mapped[1]);
+    // IPv4 empotrada. Puede llegar en decimal (::ffff:10.0.0.1) o, si el
+    // analizador de URL ya la normalizó, en hexadecimal (::ffff:a00:1).
+    const dotted = value.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+    if (dotted) return isPrivateAddress(dotted[1]);
+
+    const hex = value.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+    if (hex) {
+      const high = Number.parseInt(hex[1], 16);
+      const low = Number.parseInt(hex[2], 16);
+      return isPrivateAddress(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
+    }
     return false;
   }
   return true;
