@@ -21,6 +21,7 @@ import {
 import type { Conversation } from '@kyro/shared';
 import { ROLE_RANK } from '@kyro/shared';
 import { parseMessageParts } from '@/lib/conversation';
+import { firstLink } from '@/lib/linkPreview';
 import { timeOf } from '@/lib/format';
 import { useChat, type ThreadMessage } from '@/store/chat';
 import { toastError, toastOk, useUI } from '@/store/ui';
@@ -29,7 +30,9 @@ import { IconButton } from '@/components/ui/Button';
 import { Menu, MenuItem, MenuSeparator, useMenu } from '@/components/ui/Menu';
 import { Textarea } from '@/components/ui/Field';
 import { useLongPress } from '@/hooks/useLongPress';
+import { useSwipeReply } from '@/hooks/useSwipeReply';
 import { Attachments } from './Attachments';
+import { LinkPreviewCard } from './LinkPreviewCard';
 import styles from './MessageItem.module.css';
 
 export const QUICK_EMOJIS = ['👍', '❤️', '😂', '🎉', '🔥', '👀'];
@@ -74,6 +77,14 @@ export const MessageItem = memo(function MessageItem({
   // En privados y grupos cualquiera puede fijar; en canales, el equipo.
   const canPin = conversation.type !== 'channel' || canModerate;
   const mentionsMe = message.mentions.includes(selfId);
+  const link = message.deletedAt ? null : firstLink(message.content);
+
+  // Arrastrar hacia la derecha responde. No mientras se seleccionan mensajes
+  // ni sobre uno que todavía no ha salido: no hay nada a lo que responder.
+  const swipe = useSwipeReply(() => chat.setReplyTo(conversation.id, message), {
+    enabled: !selecting && !message.pending && !message.failed && !message.deletedAt,
+    base: longPress,
+  });
 
   if (message.type === 'system' || message.type === 'call') {
     return (
@@ -146,10 +157,24 @@ export const MessageItem = memo(function MessageItem({
         message.pending && styles.sending,
       )}
       onContextMenu={message.pending || message.failed ? undefined : menu.openAt}
-      {...longPress}
+      {...swipe.handlers}
       onClick={selecting ? () => chat.toggleSelected(message.id) : undefined}
       id={`msg-${message.id}`}
+      style={
+        swipe.offset > 0
+          ? {
+              transform: `translateX(${swipe.offset}px)`,
+              transition: swipe.dragging ? 'none' : undefined,
+            }
+          : undefined
+      }
     >
+      {/* La flecha vive detrás de la fila y se descubre al arrastrarla. */}
+      {swipe.offset > 0 ? (
+        <span className={clsx(styles.swipeHint, swipe.armed && styles.swipeHintArmed)} aria-hidden>
+          <Reply size={16} />
+        </span>
+      ) : null}
       {grouped ? (
         <span className={styles.stampSlot}>{timeOf(message.createdAt)}</span>
       ) : (
@@ -241,6 +266,8 @@ export const MessageItem = memo(function MessageItem({
               </p>
             ) : null}
             <Attachments items={message.attachments} />
+            {/* Un enlace suelto se explica solo; con adjuntos ya hay bastante. */}
+            {link && message.attachments.length === 0 ? <LinkPreviewCard url={link} /> : null}
           </>
         )}
 

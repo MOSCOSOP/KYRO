@@ -1,0 +1,65 @@
+.card {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+  max-width: 420px;
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: inherit;
+  overflow: hidden;
+  animation: kyro-fade-in var(--duration) var(--ease);
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    background var(--duration-fast) var(--ease);
+}
+
+.card:hover {
+  border-color: var(--accent-border);
+  background: var(--surface-3);
+  text-decoration: none;
+}
+
+.thumb {
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  justify-content: center;
+}
+
+.site {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  letter-spacing: var(--tracking-wide);
+}
+
+.title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.description {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

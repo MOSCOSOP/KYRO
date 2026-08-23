@@ -316,6 +316,18 @@ export interface Call {
   durationMs: number | null;
 }
 
+/* ------------------------------ Vista previa ------------------------------- */
+
+export interface LinkPreview {
+  /** La dirección final, después de las redirecciones. */
+  url: string;
+  siteName: string | null;
+  title: string;
+  description: string | null;
+  /** Ruta a la imagen servida por KYRO, ya firmada. Nunca la del sitio. */
+  imageUrl: string | null;
+}
+
 /* ---------------------------------- Búsqueda ------------------------------- */
 
 export interface SearchFileResult extends Attachment {

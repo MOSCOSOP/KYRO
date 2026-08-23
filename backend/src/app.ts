@@ -19,6 +19,7 @@ import { messagesRouter } from './modules/messages/routes.js';
 import { communitiesRouter } from './modules/communities/routes.js';
 import { notificationsRouter } from './modules/notifications/routes.js';
 import { searchRouter } from './modules/search/routes.js';
+import { linkImageRouter, linksRouter } from './modules/links/routes.js';
 import { uploadsRouter } from './modules/uploads/routes.js';
 import { callsRouter } from './modules/calls/routes.js';
 
@@ -80,6 +81,10 @@ export function createApp() {
   // Autenticación: público (tiene su propio límite estricto por endpoint).
   app.use('/api/auth', authRouter);
 
+  // Imagen de una vista previa: sin sesión, porque una etiqueta <img> no
+  // manda cabeceras. La firma es lo que impide usarlo como proxy abierto.
+  app.use('/api/links/image', linkImageRouter);
+
   // A partir de aquí todo exige sesión válida.
   const api = express.Router();
   api.use(requireAuth, requireExistingUser, apiLimiter);
@@ -89,6 +94,7 @@ export function createApp() {
   api.use('/communities', communitiesRouter);
   api.use('/notifications', notificationsRouter);
   api.use('/search', searchRouter);
+  api.use('/links', linksRouter);
   api.use('/uploads', uploadsRouter);
   api.use('/calls', callsRouter);
   app.use('/api', api);

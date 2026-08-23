@@ -4,6 +4,8 @@
  * cansa a los cinco minutos.
  */
 .row {
+  /* Deja el desplazamiento vertical al navegador y el horizontal al gesto. */
+  touch-action: pan-y;
   position: relative;
   display: flex;
   gap: var(--space-3);
@@ -41,6 +43,32 @@
  * al otro lado: el hilo sigue siendo una columna legible y aun así se ve de un
  * vistazo qué has escrito tú.
  */
+/*
+ * Gesto de respuesta. La fila se mueve; la flecha se queda quieta detrás, a la
+ * izquierda, y se enciende cuando el recorrido ya basta para soltar.
+ */
+.swipeHint {
+  position: absolute;
+  left: -34px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  background: var(--surface-3);
+  color: var(--text-tertiary);
+  transition:
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.swipeHintArmed {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .mine::after {
   content: '';
   position: absolute;
