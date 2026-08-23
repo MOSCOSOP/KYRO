@@ -1,73 +1,108 @@
 /**
  * Avisos de KYRO: sonido y notificaciones del navegador.
  *
- * Los tonos se sintetizan con WebAudio en lugar de cargar archivos: son dos
- * notas limpias, pesan cero y no hay que esperar a que descargue nada para que
- * suene el primer aviso.
+ * Los tres sonidos viven en `public/` y se cargan la primera vez que hacen
+ * falta, no al arrancar: un aviso que nadie ha pedido todavía no debería
+ * costar ancho de banda.
  *
  * Todo pasa por dos filtros antes de molestar: la preferencia del usuario y su
  * estado. En «No molestar» KYRO se calla, que es lo que significa.
  */
 
-let context: AudioContext | null = null;
+/**
+ * Un sonido de la aplicación.
+ *
+ * El navegador puede negarse a reproducir si todavía no ha habido un gesto del
+ * usuario en la página. No es un error que haya que contar a nadie: se ignora
+ * y el aviso se queda en lo visual.
+ */
+class Sound {
+  private element: HTMLAudioElement | null = null;
+  private stopTimer: number | null = null;
 
-function audio(): AudioContext | null {
-  const Ctor =
-    window.AudioContext ??
-    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!Ctor) return null;
-  if (!context || context.state === 'closed') context = new Ctor();
-  // Los navegadores suspenden el audio hasta que hay un gesto del usuario.
-  if (context.state === 'suspended') void context.resume().catch(() => undefined);
-  return context;
+  constructor(
+    private readonly src: string,
+    private readonly volume: number,
+  ) {}
+
+  private load() {
+    if (!this.element) {
+      this.element = new Audio(this.src);
+      this.element.preload = 'auto';
+      this.element.volume = this.volume;
+    }
+    return this.element;
+  }
+
+  /** Lo reproduce una vez desde el principio, cortando la repetición anterior. */
+  play() {
+    const audio = this.load();
+    audio.loop = false;
+    audio.currentTime = 0;
+    void audio.play().catch(() => undefined);
+  }
+
+  /**
+   * Lo repite hasta que se pare. `maxMs` es el seguro: si el otro extremo
+   * desaparece sin avisar, el timbre no se queda sonando para siempre.
+   */
+  loop(maxMs?: number) {
+    const audio = this.load();
+    if (!audio.paused && audio.loop) return;
+
+    audio.loop = true;
+    audio.currentTime = 0;
+    void audio.play().catch(() => undefined);
+
+    if (maxMs) {
+      this.clearTimer();
+      this.stopTimer = window.setTimeout(() => this.stop(), maxMs);
+    }
+  }
+
+  stop() {
+    this.clearTimer();
+    if (!this.element) return;
+    this.element.pause();
+    this.element.loop = false;
+    this.element.currentTime = 0;
+  }
+
+  private clearTimer() {
+    if (this.stopTimer === null) return;
+    window.clearTimeout(this.stopTimer);
+    this.stopTimer = null;
+  }
 }
 
-/** Una nota corta con entrada y salida suaves: nunca un chasquido. */
-function tone(frequency: number, start: number, duration: number, volume = 0.05) {
-  const ctx = audio();
-  if (!ctx) return;
+const message = new Sound('/notificacion.mp3', 0.5);
+const incoming = new Sound('/recibir.mp3', 0.7);
+const outgoing = new Sound('/llamada.mp3', 0.45);
 
-  const oscillator = ctx.createOscillator();
-  const gain = ctx.createGain();
-  oscillator.type = 'sine';
-  oscillator.frequency.value = frequency;
-
-  const at = ctx.currentTime + start;
-  gain.gain.setValueAtTime(0, at);
-  gain.gain.linearRampToValueAtTime(volume, at + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.0001, at + duration);
-
-  oscillator.connect(gain);
-  gain.connect(ctx.destination);
-  oscillator.start(at);
-  oscillator.stop(at + duration + 0.05);
-}
-
-/** Mensaje nuevo: dos notas ascendentes, muy breves. */
+/** Mensaje nuevo, venga de donde venga. */
 export function playMessageTone() {
-  tone(660, 0, 0.12);
-  tone(880, 0.09, 0.16);
+  message.play();
 }
 
-let ringTimer: number | null = null;
-
-/** Llamada entrante: patrón que se repite hasta que se contesta o se cuelga. */
+/**
+ * Llamada entrante. Suena en bucle con un tope de treinta segundos: pasado
+ * ese tiempo, quien llama ya ha colgado o la llamada se ha perdido.
+ */
 export function startRingtone() {
-  if (ringTimer !== null) return;
-
-  const ring = () => {
-    tone(523, 0, 0.35, 0.06);
-    tone(659, 0.18, 0.4, 0.06);
-  };
-
-  ring();
-  ringTimer = window.setInterval(ring, 2400);
+  incoming.loop(30_000);
 }
 
 export function stopRingtone() {
-  if (ringTimer === null) return;
-  window.clearInterval(ringTimer);
-  ringTimer = null;
+  incoming.stop();
+}
+
+/** Llamada saliente: el tono que se oye mientras al otro lado suena el timbre. */
+export function startRingback() {
+  outgoing.loop();
+}
+
+export function stopRingback() {
+  outgoing.stop();
 }
 
 /* --------------------------- Avisos del navegador -------------------------- */

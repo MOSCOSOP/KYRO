@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
   resolve: {
     alias: {
@@ -24,7 +24,15 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    /*
+     * Los mapas de código solo en desarrollo.
+     *
+     * Publicados, cualquiera puede abrir las herramientas del navegador y leer
+     * el código fuente entero —con sus comentarios y sus nombres de variable—
+     * como si tuviera el repositorio delante. Para depurar en producción están
+     * los mensajes de error del propio backend.
+     */
+    sourcemap: mode !== 'production',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -34,4 +42,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

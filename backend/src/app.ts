@@ -5,6 +5,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import { forbidden } from './lib/errors.js';
+import { logger } from './lib/logger.js';
 import { httpLogger } from './middleware/httpLogger.js';
 import { requireAuth, requireExistingUser } from './auth/middleware.js';
 import { apiLimiter } from './middleware/rateLimit.js';
@@ -43,7 +44,16 @@ export function createApp() {
     cors({
       origin(origin, callback) {
         // Sin origen: peticiones del propio servidor, curl o apps nativas.
-        if (!origin || env.corsOrigins.includes(origin)) return callback(null, true);
+        if (!origin || env.allowsOrigin(origin)) return callback(null, true);
+        /*
+         * Un origen rechazado se ve en el navegador como «falta la cabecera
+         * Access-Control-Allow-Origin», que no dice qué hay que arreglar. Aquí
+         * queda escrito el origen exacto y la lista con la que se comparó.
+         */
+        logger.warn(
+          { origin, permitidos: env.corsOrigins },
+          'Origen bloqueado por CORS: revisa CORS_ORIGINS',
+        );
         callback(forbidden('Origen no permitido'));
       },
       credentials: true,

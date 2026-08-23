@@ -70,12 +70,26 @@ export const env = {
   isProd: raw.NODE_ENV === 'production',
   isDev: raw.NODE_ENV === 'development',
   corsOrigins: raw.CORS_ORIGINS.split(',')
-    .map((o) => o.trim())
+    .map((o) => normalizeOrigin(o))
     .filter(Boolean),
   iceServers: parseIceServers(raw.ICE_SERVERS),
   /** postgres | sqlite — deducido de la URL, usado para adaptar consultas. */
   dbProvider: raw.DATABASE_URL.startsWith('file:') ? ('sqlite' as const) : ('postgres' as const),
+
+  /** ¿Se admite este origen del navegador? */
+  allowsOrigin(origin: string) {
+    return env.corsOrigins.includes(normalizeOrigin(origin));
+  },
 };
+
+/*
+ * Un origen es esquema + host + puerto, en minúsculas y sin barra final. Se
+ * normaliza a los dos lados de la comparación porque el error más común al
+ * configurarlo es escribir «https://kyro.app/» con la barra del navegador.
+ */
+function normalizeOrigin(value: string) {
+  return value.trim().toLowerCase().replace(/\/+$/, '');
+}
 
 function parseIceServers(value: string) {
   try {

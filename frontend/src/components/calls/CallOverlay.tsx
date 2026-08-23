@@ -18,6 +18,7 @@ import {
   WifiOff,
 } from 'lucide-react';
 import type { PublicUser } from '@kyro/shared';
+import { startRingback, stopRingback } from '@/lib/alerts';
 import { useCalls, type CallPhase } from '@/store/calls';
 import { useSession } from '@/store/session';
 import { useIdle, useSpeaking } from '@/hooks/useSpeaking';
@@ -57,6 +58,16 @@ export function CallOverlay() {
       connectedAt,
     };
   }, [call, connectedAt, selfId]);
+
+  /*
+   * El tono de llamada saliente vive con la fase, no con el botón de llamar:
+   * así se corta igual si contestan, si cuelgan o si la llamada falla.
+   */
+  useEffect(() => {
+    if (phase !== 'outgoing') return;
+    startRingback();
+    return () => stopRingback();
+  }, [phase]);
 
   useEffect(() => {
     if (phase !== 'idle' || !lastCall.current) return;
