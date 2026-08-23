@@ -195,6 +195,14 @@ las dos partes estén en el mismo espacio. Funciona bien en llamadas privadas y 
 pequeños; para salas grandes habría que poner un SFU, y la señalización ya está
 preparada para sustituirse sin tocar la interfaz.
 
+### Pruebas
+
+`npm test` levanta el backend contra una base de datos SQLite propia, creada
+desde el esquema en cada ejecución. Cubre lo que no se ve romperse hasta que es
+tarde: la rotación del token de refresco (incluida la carrera de dos pestañas
+refrescando a la vez, y la detección de un token reutilizado), quién puede leer
+y editar qué, y los destinos a los que el servidor tiene prohibido salir.
+
 ### Seguridad
 
 - Contraseñas con **bcrypt** (12 rondas). Nunca se almacenan en texto plano.
@@ -248,8 +256,17 @@ Identidad y producto: paleta de comandos con acciones (`Ctrl/⌘ + K`), perfil
 flotante desde cualquier persona, presencia por contexto («en una llamada» la
 publica el servidor), conexión rápida escribiendo `@usuario`, modo llamada con
 controles que se apartan solos e indicador de quién habla, privacidad aplicada
-en el servidor, avisos del sistema y sonido, dos profundidades de tema, y PWA
-instalable.
+en el servidor, avisos del sistema y sonido, dos profundidades de tema, color
+propio de cada persona y de cada comunidad, y PWA instalable.
+
+Enlaces: un enlace suelto en un mensaje se acompaña de su vista previa (sitio,
+título, descripción e imagen). El servidor resuelve el dominio antes de salir y
+rechaza cualquier destino de la red privada, y la imagen se sirve desde KYRO
+—firmada— para no revelar la IP de quien lee el mensaje.
+
+Móvil: pulsación larga para las acciones de un mensaje y arrastrar hacia la
+derecha para responder. Ninguna interacción depende de pasar el ratón por
+encima.
 
 ## Qué está preparado pero todavía no implementado
 
@@ -277,6 +294,7 @@ Se dice claramente en lugar de simularlo:
 | `npm run build` | Compila `shared`, `backend` y `frontend` |
 | `npm run start` | Arranca el backend compilado |
 | `npm run typecheck` | Comprueba los tipos de los tres paquetes |
+| `npm test` | Pruebas del backend (sesión, permisos y destinos de salida) |
 | `npm run db:setup` | Sincroniza el esquema y genera el cliente de Prisma |
 | `npm run db:seed` | Datos de ejemplo |
 | `npm run db:studio -w backend` | Prisma Studio |
