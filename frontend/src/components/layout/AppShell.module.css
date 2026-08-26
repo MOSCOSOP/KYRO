@@ -33,6 +33,11 @@
   gap: var(--space-1);
 }
 
+.sectionTransition {
+  min-width: 0;
+  min-height: 0;
+}
+
 /*
  * Una losa de luz que se desliza y cambia de forma hasta encajar en el
  * destino activo, en vez de aparecer de golpe en cada uno. Su posición y

@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { dur } from '@/lib/motion';
+import { dur, EASE } from '@/lib/motion';
 import {
   Bell,
   Home,
@@ -53,7 +53,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navRef = useRef<HTMLElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
   const indicatorPlaced = useRef(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+  // Primer tramo de la ruta: cambia al pasar de Mensajes a Comunidades, no al
+  // abrir otra conversación dentro de Mensajes. Ese caso ya lo resuelve el
+  // propio ChatView.
+  const section = location.pathname.split('/')[1] ?? '';
 
   const unreadMessages = useMemo(
     () => conversations.reduce((total, conversation) => total + conversation.unreadCount, 0),
@@ -91,6 +96,18 @@ export function AppShell({ children }: { children: ReactNode }) {
       }
     },
     { dependencies: [location.pathname, compact], scope: navRef },
+  );
+
+  // Al cambiar de sección, el contenido entra con un gesto corto en vez de
+  // sustituirse de golpe. No es un fundido genérico: dura lo mismo que un
+  // parpadeo evitado, no una transición de página.
+  useGSAP(
+    () => {
+      const el = sectionRef.current;
+      if (!el) return;
+      gsap.from(el, { opacity: 0, y: 8, duration: dur('fast'), ease: EASE });
+    },
+    { dependencies: [section], scope: sectionRef },
   );
 
   return (
@@ -153,7 +170,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
 
-      {children}
+      <div className={styles.sectionTransition} ref={sectionRef}>
+        {children}
+      </div>
 
       {menu.anchor && user ? (
         <Menu anchor={menu.anchor} open={menu.open} onClose={menu.close} label="Tu cuenta">

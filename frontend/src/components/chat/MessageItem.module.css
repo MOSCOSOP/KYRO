@@ -32,6 +32,12 @@
   background: rgba(255, 255, 255, 0.018);
 }
 
+/* El mensaje que se acaba de enviar entra con GSAP, no con la animación de
+   CSS por defecto: evita que las dos se solapen. */
+.noCssEnter {
+  animation: none;
+}
+
 /*
  * Gesto de respuesta. La fila se mueve; la flecha se queda quieta detrás, a la
  * izquierda, y se enciende cuando el recorrido ya basta para soltar.

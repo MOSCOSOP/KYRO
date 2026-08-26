@@ -31,3 +31,27 @@ export function dur(key: keyof typeof DURATION) {
 }
 
 gsap.defaults({ ease: EASE });
+
+/**
+ * Respuesta física de un control al activarse: se comprime y vuelve, como si
+ * de verdad hubiera recibido el gesto. Pensado para acciones que también se
+ * disparan por teclado (Enter, atajos), donde `:active` de CSS nunca llega a
+ * pintarse.
+ */
+export function punch(target: gsap.TweenTarget) {
+  if (prefersReducedMotion()) return;
+  gsap
+    .timeline()
+    .to(target, { scale: 0.88, duration: 0.07, ease: EASE })
+    .to(target, { scale: 1, duration: 0.22, ease: EASE_POP });
+}
+
+/** Entra deslizándose desde arriba: barras que aparecen bajo una cabecera. */
+export function enterDown(target: gsap.TweenTarget) {
+  gsap.from(target, { opacity: 0, y: -10, duration: dur('fast'), ease: EASE });
+}
+
+/** Entra deslizándose desde abajo: barras que aparecen sobre el compositor. */
+export function enterUp(target: gsap.TweenTarget) {
+  gsap.from(target, { opacity: 0, y: 10, duration: dur('fast'), ease: EASE });
+}

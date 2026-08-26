@@ -13,7 +13,6 @@
   background: rgba(4, 5, 8, 0.5);
   display: flex;
   justify-content: flex-end;
-  animation: kyro-fade-in var(--duration-fast) var(--ease);
 }
 
 .panel {
@@ -25,19 +24,7 @@
   background: var(--surface);
   border-left: 1px solid var(--border);
   box-shadow: var(--shadow-lg);
-  animation: slide-in var(--duration) var(--ease);
   overflow-y: auto;
-}
-
-@keyframes slide-in {
-  from {
-    transform: translateX(24px);
-    opacity: 0;
-  }
-  to {
-    transform: none;
-    opacity: 1;
-  }
 }
 
 .close {
@@ -167,17 +154,5 @@
     border-left: none;
     border-top: 1px solid var(--border);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    animation: sheet-in var(--duration) var(--ease);
-  }
-
-  @keyframes sheet-in {
-    from {
-      transform: translateY(28px);
-      opacity: 0;
-    }
-    to {
-      transform: none;
-      opacity: 1;
-    }
   }
 }

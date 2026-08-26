@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
+import { dur, EASE, enterDown } from '@/lib/motion';
 import {
   ArrowLeft,
   BellOff,
@@ -58,6 +61,28 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
   const [forwarding, setForwarding] = useState<Message[]>([]);
   const selection = useChat((state) => state.selection);
   const [scrolled, setScrolled] = useState(false);
+  const threadRef = useRef<HTMLDivElement>(null);
+  const pinnedRef = useRef<HTMLDivElement>(null);
+
+  // Cambiar de conversación no debe sentirse como que la interfaz parpadea:
+  // el hilo entra con un gesto corto, y como corre en la fase de layout, pasa
+  // antes de que el navegador llegue a pintar el contenido viejo.
+  useGSAP(
+    () => {
+      const el = threadRef.current;
+      if (!el) return;
+      gsap.fromTo(el, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: dur('fast'), ease: EASE });
+    },
+    { dependencies: [conversation.id], scope: threadRef },
+  );
+
+  useGSAP(
+    () => {
+      if (pinned.length === 0 || !pinnedRef.current) return;
+      enterDown(pinnedRef.current);
+    },
+    { dependencies: [pinned.length > 0], scope: pinnedRef },
+  );
 
   // Carga del hilo y suscripción en tiempo real.
   useEffect(() => {
@@ -269,7 +294,7 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
       </header>
 
       {pinned.length > 0 ? (
-        <div className={styles.pinnedBar}>
+        <div className={styles.pinnedBar} ref={pinnedRef}>
           <Pin size={14} />
           <button
             type="button"
@@ -290,7 +315,7 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
       ) : null}
 
       <div className={clsx(styles.body, infoOpen && !compact && styles.bodyWithPanel)}>
-        <div className={styles.thread}>
+        <div className={styles.thread} ref={threadRef}>
           <MessageList
             conversation={conversation}
             onForward={(message) => setForwarding([message])}
@@ -412,6 +437,9 @@ function ConversationSearch({
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Message[]>([]);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => enterDown(barRef.current), { scope: barRef });
 
   useEffect(() => {
     if (query.trim().length < 2) {
@@ -438,7 +466,7 @@ function ConversationSearch({
 
   return (
     <>
-      <div className={styles.searchBar}>
+      <div className={styles.searchBar} ref={barRef}>
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}

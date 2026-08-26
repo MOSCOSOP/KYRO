@@ -1,5 +1,8 @@
 import { memo, useRef, useState, type KeyboardEvent } from 'react';
 import clsx from 'clsx';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
+import { dur, EASE_POP } from '@/lib/motion';
 import {
   AlertCircle,
   Bookmark,
@@ -58,6 +61,7 @@ export const MessageItem = memo(function MessageItem({
 }: MessageItemProps) {
   const menu = useMenu();
   const moreRef = useRef<HTMLButtonElement>(null);
+  const rowRef = useRef<HTMLElement>(null);
   const [draft, setDraft] = useState(message.content);
   const editingId = useChat((state) => state.editing[conversation.id]);
   const chat = useChat.getState();
@@ -73,6 +77,9 @@ export const MessageItem = memo(function MessageItem({
 
   const editing = editingId === message.id;
   const mine = message.author?.id === selfId;
+  // Solo es "recién enviado" en el instante en que este componente nace: si
+  // ya estaba pendiente en un render anterior, no es un envío, es un repintado.
+  const justSent = useRef(mine && Boolean(message.pending)).current;
   const canModerate = ROLE_RANK[conversation.myRole] >= ROLE_RANK.moderator;
   // En privados y grupos cualquiera puede fijar; en canales, el equipo.
   const canPin = conversation.type !== 'channel' || canModerate;
@@ -85,6 +92,21 @@ export const MessageItem = memo(function MessageItem({
     enabled: !selecting && !message.pending && !message.failed && !message.deletedAt,
     base: longPress,
   });
+
+  // El mensaje que acabas de mandar no aparece: sube desde donde estaba el
+  // compositor, como si de verdad hubiera salido de ahí. El resto de la
+  // fila sigue con la entrada mínima de CSS.
+  useGSAP(
+    () => {
+      if (!justSent || !rowRef.current) return;
+      gsap.fromTo(
+        rowRef.current,
+        { opacity: 0, y: 22, scale: 0.96 },
+        { opacity: 1, y: 0, scale: 1, duration: dur('normal'), ease: EASE_POP },
+      );
+    },
+    { scope: rowRef },
+  );
 
   if (message.type === 'system' || message.type === 'call') {
     return (
@@ -146,6 +168,7 @@ export const MessageItem = memo(function MessageItem({
 
   return (
     <article
+      ref={rowRef}
       className={clsx(
         styles.row,
         !grouped && styles.rowFirst,
@@ -155,6 +178,7 @@ export const MessageItem = memo(function MessageItem({
         mentionsMe && !mine && styles.mentioned,
         mine && styles.mine,
         message.pending && styles.sending,
+        justSent && styles.noCssEnter,
       )}
       onContextMenu={message.pending || message.failed ? undefined : menu.openAt}
       {...swipe.handlers}

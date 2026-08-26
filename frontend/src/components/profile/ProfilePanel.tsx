@@ -1,15 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { MessageCircle, Phone, Settings, UserCheck, UserPlus, Users, Video, X } from 'lucide-react';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 import type { ContactStatus, Conversation, PublicUser } from '@kyro/shared';
 import { api } from '@/lib/api';
 import { fullStamp, presenceLine } from '@/lib/format';
+import { dur } from '@/lib/motion';
 import { useCalls } from '@/store/calls';
 import { useChat } from '@/store/chat';
 import { usePresenceOf } from '@/store/presence';
 import { useSession } from '@/store/session';
 import { toastError, toastOk, useUI } from '@/store/ui';
+import { usePresence } from '@/hooks/usePresence';
+import { useIsCompact } from '@/hooks/useMediaQuery';
 import { Avatar, PresenceDot } from '@/components/ui/Avatar';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Loading } from '@/components/ui/Feedback';
@@ -35,6 +40,10 @@ export function ProfilePanel() {
   const [busy, setBusy] = useState(false);
   const presence = usePresenceOf(profile?.user);
   const navigate = useNavigate();
+  const compact = useIsCompact();
+  const { mounted, phase, onExitComplete } = usePresence(Boolean(username));
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!username) return;
@@ -55,15 +64,39 @@ export function ProfilePanel() {
   }, [username]);
 
   useEffect(() => {
-    if (!username) return;
+    if (!mounted) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') close();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [username, close]);
+  }, [mounted, close]);
 
-  if (!username) return null;
+  // El perfil llega por el lado en escritorio y sube desde abajo en móvil; la
+  // salida es más rápida que la entrada, para que cerrar se sienta ligero.
+  useGSAP(
+    () => {
+      if (!mounted) return;
+      const backdrop = backdropRef.current;
+      const panel = panelRef.current;
+      if (!backdrop || !panel) return;
+      const offset = compact ? { y: 24 } : { x: 24 };
+
+      if (phase === 'enter') {
+        gsap.set(backdrop, { opacity: 0 });
+        gsap.set(panel, { opacity: 0, ...offset });
+        gsap.to(backdrop, { opacity: 1, duration: dur('fast') });
+        gsap.to(panel, { opacity: 1, x: 0, y: 0, duration: dur('normal') });
+      } else {
+        const tl = gsap.timeline({ onComplete: onExitComplete });
+        tl.to(panel, { opacity: 0, ...offset, duration: dur('fast') }, 0);
+        tl.to(backdrop, { opacity: 0, duration: dur('fast') }, 0);
+      }
+    },
+    { dependencies: [phase, mounted, compact], scope: backdropRef },
+  );
+
+  if (!mounted) return null;
 
   const isSelf = profile?.user.id === selfId;
 
@@ -124,12 +157,13 @@ export function ProfilePanel() {
 
   return createPortal(
     <div
+      ref={backdropRef}
       className={styles.backdrop}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}
     >
-      <aside className={styles.panel} role="dialog" aria-modal="true" aria-label="Perfil">
+      <aside ref={panelRef} className={styles.panel} role="dialog" aria-modal="true" aria-label="Perfil">
         <IconButton label="Cerrar" className={styles.close} onClick={close}>
           <X size={16} />
         </IconButton>

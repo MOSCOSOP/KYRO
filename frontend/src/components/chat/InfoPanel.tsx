@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { FileText, Link2, LogOut, UserPlus, Users, X } from 'lucide-react';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 import type { Attachment, Conversation, Message, PublicUser } from '@kyro/shared';
 import { ROLE_LABEL, ROLE_RANK } from '@kyro/shared';
 import { api } from '@/lib/api';
+import { dur } from '@/lib/motion';
 import { conversationName, otherMember } from '@/lib/conversation';
 import { fileSize, presenceLine } from '@/lib/format';
 import { useChat } from '@/store/chat';
@@ -38,6 +41,14 @@ export function InfoPanel({
   const [promoteOpen, setPromoteOpen] = useState(false);
 
   const isAdmin = ROLE_RANK[conversation.myRole] >= ROLE_RANK.admin;
+  const panelRef = useRef<HTMLElement>(null);
+
+  // Vive en el grid del chat, no en un portal: no hay salida que animar, pero
+  // sí una llegada que puede sentirse deslizada en vez de aparecida.
+  useGSAP(
+    () => gsap.from(panelRef.current, { opacity: 0, x: 16, duration: dur('fast') }),
+    { scope: panelRef },
+  );
 
   const leave = async () => {
     const ok = await confirm({
@@ -56,7 +67,7 @@ export function InfoPanel({
   };
 
   return (
-    <aside className={styles.panel} aria-label="Detalles de la conversación">
+    <aside ref={panelRef} className={styles.panel} aria-label="Detalles de la conversación">
       <header className={styles.header}>
         <span className={styles.title}>Detalles</span>
         <IconButton label="Cerrar detalles" size="sm" onClick={onClose}>

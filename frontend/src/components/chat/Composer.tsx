@@ -10,7 +10,7 @@ import { useChat } from '@/store/chat';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { useSession } from '@/store/session';
 import { toastError } from '@/store/ui';
-import { dur, EASE_POP } from '@/lib/motion';
+import { dur, EASE_POP, enterUp, punch } from '@/lib/motion';
 import { IconButton } from '@/components/ui/Button';
 import styles from './Composer.module.css';
 
@@ -45,6 +45,8 @@ export function Composer({ conversation }: { conversation: Conversation }) {
   const textarea = useRef<HTMLTextAreaElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const trailingRef = useRef<HTMLSpanElement>(null);
+  const replyBarRef = useRef<HTMLDivElement>(null);
+  const recordingRef = useRef<HTMLDivElement>(null);
   const hasContent = Boolean(draft.trim() || pending.length > 0);
 
   // El botón de enviar no sustituye al de grabar por arte de magia: entra con
@@ -60,6 +62,26 @@ export function Composer({ conversation }: { conversation: Conversation }) {
       );
     },
     { dependencies: [hasContent], scope: trailingRef },
+  );
+
+  // La barra de respuesta se anuncia entrando, no aparece de golpe encima
+  // del campo.
+  useGSAP(
+    () => {
+      if (!replyTo || !replyBarRef.current) return;
+      enterUp(replyBarRef.current);
+    },
+    { dependencies: [Boolean(replyTo)], scope: replyBarRef },
+  );
+
+  // Entrar en modo grabación cambia toda la caja: se marca con el mismo
+  // gesto de llegada que el resto de paneles transitorios de KYRO.
+  useGSAP(
+    () => {
+      if (!voice.recording || !recordingRef.current) return;
+      enterUp(recordingRef.current);
+    },
+    { dependencies: [voice.recording], scope: recordingRef },
   );
 
   const readOnly =
@@ -163,6 +185,10 @@ export function Composer({ conversation }: { conversation: Conversation }) {
     if (!content && tokens.length === 0) return;
     if (pending.some((item) => !item.token)) return; // Todavía subiendo.
 
+    // Responde igual si se envía con clic o con Enter: es el gesto de haber
+    // mandado algo, no el efecto hover de un botón.
+    if (trailingRef.current) punch(trailingRef.current);
+
     // Los adjuntos ya subidos se muestran en el propio mensaje mientras sale.
     const attachments = pending
       .map((item) => item.attachment)
@@ -217,7 +243,7 @@ export function Composer({ conversation }: { conversation: Conversation }) {
   return (
     <div className={styles.wrapper}>
       {replyTo ? (
-        <div className={styles.replyBar}>
+        <div className={styles.replyBar} ref={replyBarRef}>
           <span className={styles.replyText}>
             Respondiendo a <span className={styles.replyAuthor}>{replyTo.author?.displayName}</span>
             {replyTo.content ? ` · ${replyTo.content}` : ''}
@@ -252,7 +278,10 @@ export function Composer({ conversation }: { conversation: Conversation }) {
       ) : null}
 
       {voice.recording ? (
-        <div className={clsx(styles.box, replyTo && styles.boxWithReply, styles.recording)}>
+        <div
+          className={clsx(styles.box, replyTo && styles.boxWithReply, styles.recording)}
+          ref={recordingRef}
+        >
           <IconButton label="Descartar grabación" danger onClick={() => void discardVoice()}>
             <Trash2 size={18} />
           </IconButton>
