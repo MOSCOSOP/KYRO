@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent } from 'react';
 import clsx from 'clsx';
 import { Megaphone, Mic, Paperclip, Send, Smile, Trash2, X } from 'lucide-react';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 import type { Attachment, Conversation } from '@kyro/shared';
 import { LIMITS, ROLE_RANK } from '@kyro/shared';
 import { uploadFile } from '@/lib/api';
@@ -8,6 +10,7 @@ import { useChat } from '@/store/chat';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { useSession } from '@/store/session';
 import { toastError } from '@/store/ui';
+import { dur, EASE_POP } from '@/lib/motion';
 import { IconButton } from '@/components/ui/Button';
 import styles from './Composer.module.css';
 
@@ -41,6 +44,23 @@ export function Composer({ conversation }: { conversation: Conversation }) {
   const voice = useVoiceRecorder();
   const textarea = useRef<HTMLTextAreaElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const trailingRef = useRef<HTMLSpanElement>(null);
+  const hasContent = Boolean(draft.trim() || pending.length > 0);
+
+  // El botón de enviar no sustituye al de grabar por arte de magia: entra con
+  // un golpe de muñeca, la misma sensación física que tendría pulsarlo.
+  useGSAP(
+    () => {
+      const el = trailingRef.current;
+      if (!el) return;
+      gsap.fromTo(
+        el,
+        { scale: 0.5, opacity: 0 },
+        { scale: 1, opacity: 1, duration: dur('fast'), ease: EASE_POP },
+      );
+    },
+    { dependencies: [hasContent], scope: trailingRef },
+  );
 
   const readOnly =
     conversation.channelKind === 'announcement' &&
@@ -312,19 +332,22 @@ export function Composer({ conversation }: { conversation: Conversation }) {
             texto graba. Es un solo sitio para la acción principal, como espera
             cualquiera que venga del móvil.
           */}
-          {draft.trim() || pending.length > 0 ? (
-            <IconButton
-              label="Enviar"
-              onClick={() => void send()}
-              disabled={sending || pending.some((item) => !item.token)}
-            >
-              <Send size={18} />
-            </IconButton>
-          ) : (
-            <IconButton label="Grabar un mensaje de voz" onClick={() => void voice.start()}>
-              <Mic size={18} />
-            </IconButton>
-          )}
+          <span className={styles.trailing} ref={trailingRef}>
+            {hasContent ? (
+              <IconButton
+                label="Enviar"
+                className={styles.sendButton}
+                onClick={() => void send()}
+                disabled={sending || pending.some((item) => !item.token)}
+              >
+                <Send size={18} />
+              </IconButton>
+            ) : (
+              <IconButton label="Grabar un mensaje de voz" onClick={() => void voice.start()}>
+                <Mic size={18} />
+              </IconButton>
+            )}
+          </span>
 
           {emojiOpen ? (
             <div className={styles.emojiPanel} role="listbox" aria-label="Emojis">

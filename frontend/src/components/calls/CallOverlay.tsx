@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
+import { dur } from '@/lib/motion';
 import {
   Loader2,
   Mic,
@@ -49,6 +52,8 @@ export function CallOverlay() {
   /* Al colgar, un cierre breve en vez de un corte seco. */
   const [ended, setEnded] = useState<{ name: string; duration: string } | null>(null);
   const lastCall = useRef<{ name: string; connectedAt: number | null } | null>(null);
+  const incomingHeadRef = useRef<HTMLDivElement>(null);
+  const incomingActionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!call) return;
@@ -81,10 +86,25 @@ export function CallOverlay() {
     return () => window.clearTimeout(timer);
   }, [phase]);
 
+  // Quién llama y cómo responder no aparecen a la vez: la persona se presenta
+  // primero, las dos decisiones un instante después.
+  useGSAP(
+    () => {
+      if (phase !== 'incoming') return;
+      const head = incomingHeadRef.current;
+      const actions = incomingActionsRef.current;
+      if (!head || !actions) return;
+      const tl = gsap.timeline({ defaults: { duration: dur('normal') } });
+      tl.from(head, { opacity: 0, y: 12 }, 0);
+      tl.from(actions, { opacity: 0, y: 12 }, 0.1);
+    },
+    { dependencies: [phase] },
+  );
+
   if (phase === 'incoming' && incoming) {
     return createPortal(
       <div className={styles.incoming} role="alertdialog" aria-label="Llamada entrante">
-        <div className={styles.incomingHead}>
+        <div className={styles.incomingHead} ref={incomingHeadRef}>
           <span className={styles.incomingRings}>
             <Avatar user={incoming.initiator} size="xl" />
           </span>
@@ -97,7 +117,7 @@ export function CallOverlay() {
           </span>
         </div>
 
-        <div className={styles.incomingActions}>
+        <div className={styles.incomingActions} ref={incomingActionsRef}>
           <button
             type="button"
             className={styles.bigAction}

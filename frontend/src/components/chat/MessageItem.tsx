@@ -183,93 +183,97 @@ export const MessageItem = memo(function MessageItem({
         </span>
       )}
 
-      <div className={styles.content}>
-        {message.replyTo ? (
-          <button
-            type="button"
-            className={styles.replyRef}
-            onClick={() => onJumpTo?.(message.replyTo!.id)}
-          >
-            <Reply size={12} />
-            <span className={styles.replyAuthor}>{message.replyTo.authorName}</span>
-            <span className={styles.replyText}>
-              {message.replyTo.deletedAt
-                ? 'Mensaje eliminado'
-                : message.replyTo.content || 'Archivo adjunto'}
-            </span>
-          </button>
-        ) : null}
-
-        {!grouped ? (
-          <div className={styles.meta}>
+      <div className={clsx(styles.content, editing && styles.contentEditing)}>
+        <div className={styles.bubble}>
+          {message.replyTo ? (
             <button
               type="button"
-              className={styles.author}
-              onClick={() => message.author && openProfile(message.author.username)}
+              className={styles.replyRef}
+              onClick={() => onJumpTo?.(message.replyTo!.id)}
             >
-              {message.author?.displayName ?? 'Alguien'}
+              <Reply size={12} />
+              <span className={styles.replyAuthor}>{message.replyTo.authorName}</span>
+              <span className={styles.replyText}>
+                {message.replyTo.deletedAt
+                  ? 'Mensaje eliminado'
+                  : message.replyTo.content || 'Archivo adjunto'}
+              </span>
             </button>
-            <span className={styles.time}>{timeOf(message.createdAt)}</span>
-            {message.meta?.forwarded ? (
-              <span className={styles.badge}>
-                <Forward size={9} /> Reenviado
-              </span>
-            ) : null}
-            {message.pinnedAt ? (
-              <span className={styles.badge}>
-                <Pin size={9} /> Fijado
-              </span>
-            ) : null}
-          </div>
-        ) : null}
+          ) : null}
 
-        {message.deletedAt ? (
-          <p className={clsx(styles.text, styles.deleted)}>Este mensaje fue eliminado</p>
-        ) : editing ? (
-          <div className={styles.editor}>
-            <Textarea
-              value={draft}
-              autoFocus
-              rows={2}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={onEditorKeyDown}
-            />
-            <span className={styles.editorHint}>
-              Enter para guardar · Esc para cancelar
-            </span>
-          </div>
-        ) : (
-          <>
-            {message.content ? (
-              <p className={styles.text}>
-                <MessageText content={message.content} selfId={selfId} conversation={conversation} />
-                {message.editedAt ? <span className={styles.edited}>(editado)</span> : null}
-                {message.pending ? (
-                  <span className={styles.receipts} title="Enviando">
-                    <Clock size={12} />
-                  </span>
-                ) : null}
-                {mine && !message.pending && !message.failed && conversation.type === 'direct' ? (
-                  <span
-                    className={clsx(
-                      styles.receipts,
-                      message.readBy.some((id) => id !== selfId) && styles.receiptsRead,
-                    )}
-                  >
-                    {message.readBy.some((id) => id !== selfId) ? (
-                      <CheckCheck size={13} />
-                    ) : (
-                      <Check size={13} />
-                    )}
-                  </span>
-                ) : null}
-              </p>
-            ) : null}
-            <Attachments items={message.attachments} />
-            {/* Un enlace suelto se explica solo; con adjuntos ya hay bastante. */}
-            {link && message.attachments.length === 0 ? <LinkPreviewCard url={link} /> : null}
-          </>
-        )}
+          {!grouped ? (
+            <div className={styles.meta}>
+              {mine ? null : (
+                <button
+                  type="button"
+                  className={styles.author}
+                  onClick={() => message.author && openProfile(message.author.username)}
+                >
+                  {message.author?.displayName ?? 'Alguien'}
+                </button>
+              )}
+              <span className={styles.time}>{timeOf(message.createdAt)}</span>
+              {message.meta?.forwarded ? (
+                <span className={styles.badge}>
+                  <Forward size={9} /> Reenviado
+                </span>
+              ) : null}
+              {message.pinnedAt ? (
+                <span className={styles.badge}>
+                  <Pin size={9} /> Fijado
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+
+          {message.deletedAt ? (
+            <p className={clsx(styles.text, styles.deleted)}>Este mensaje fue eliminado</p>
+          ) : editing ? (
+            <div className={styles.editor}>
+              <Textarea
+                value={draft}
+                autoFocus
+                rows={2}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={onEditorKeyDown}
+              />
+              <span className={styles.editorHint}>
+                Enter para guardar · Esc para cancelar
+              </span>
+            </div>
+          ) : (
+            <>
+              {message.content ? (
+                <p className={styles.text}>
+                  <MessageText content={message.content} selfId={selfId} conversation={conversation} />
+                  {message.editedAt ? <span className={styles.edited}>(editado)</span> : null}
+                  {message.pending ? (
+                    <span className={styles.receipts} title="Enviando">
+                      <Clock size={12} />
+                    </span>
+                  ) : null}
+                  {mine && !message.pending && !message.failed && conversation.type === 'direct' ? (
+                    <span
+                      className={clsx(
+                        styles.receipts,
+                        message.readBy.some((id) => id !== selfId) && styles.receiptsRead,
+                      )}
+                    >
+                      {message.readBy.some((id) => id !== selfId) ? (
+                        <CheckCheck size={13} />
+                      ) : (
+                        <Check size={13} />
+                      )}
+                    </span>
+                  ) : null}
+                </p>
+              ) : null}
+              <Attachments items={message.attachments} />
+              {/* Un enlace suelto se explica solo; con adjuntos ya hay bastante. */}
+              {link && message.attachments.length === 0 ? <LinkPreviewCard url={link} /> : null}
+            </>
+          )}
+        </div>
 
         {/* No llegó a salir: se queda a la vista, con la salida en la mano. */}
         {message.failed ? (
@@ -347,7 +351,7 @@ export const MessageItem = memo(function MessageItem({
       ) : null}
 
       {menu.anchor ? (
-        <Menu anchor={menu.anchor} onClose={menu.close} label="Acciones del mensaje">
+        <Menu anchor={menu.anchor} open={menu.open} onClose={menu.close} label="Acciones del mensaje">
           <div style={{ display: 'flex', padding: 4, gap: 2 }}>
             {QUICK_EMOJIS.map((emoji) => (
               <button

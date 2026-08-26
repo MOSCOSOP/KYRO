@@ -220,7 +220,7 @@ export function ChannelPanel({
       </div>
 
       {menu.anchor ? (
-        <Menu anchor={menu.anchor} onClose={menu.close} label="Opciones de la comunidad">
+        <Menu anchor={menu.anchor} open={menu.open} onClose={menu.close} label="Opciones de la comunidad">
           {canInvite ? (
             <MenuItem
               icon={<UserPlus size={16} />}

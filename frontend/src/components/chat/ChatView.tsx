@@ -234,14 +234,14 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
 
         <div className={styles.actions}>
           {canCall ? (
-            <>
+            <span className={styles.callActions}>
               <IconButton label="Llamar" onClick={() => startCall('audio')}>
                 <Phone size={18} />
               </IconButton>
               <IconButton label="Videollamada" onClick={() => startCall('video')}>
                 <Video size={18} />
               </IconButton>
-            </>
+            </span>
           ) : null}
           {/* En móvil el nombre necesita el sitio: estos dos pasan al menú. */}
           {!compact ? (
@@ -304,7 +304,7 @@ export function ChatView({ conversation }: { conversation: Conversation }) {
       </div>
 
       {menu.anchor ? (
-        <Menu anchor={menu.anchor} onClose={menu.close} label="Opciones de la conversación">
+        <Menu anchor={menu.anchor} open={menu.open} onClose={menu.close} label="Opciones de la conversación">
           {compact ? (
             <>
               <MenuItem

@@ -18,7 +18,6 @@
   justify-content: center;
   align-items: flex-start;
   padding: 11vh var(--space-4) var(--space-4);
-  animation: kyro-fade-in var(--duration-fast) var(--ease);
 }
 
 .panel {
@@ -35,7 +34,6 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   overflow: hidden;
-  animation: palette-in var(--duration) var(--ease);
 }
 
 /* Filo de luz superior: el detalle que identifica la paleta. */
@@ -48,17 +46,6 @@
   height: 1px;
   background: var(--brand-gradient);
   opacity: 0.9;
-}
-
-@keyframes palette-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
 }
 
 .searchRow {

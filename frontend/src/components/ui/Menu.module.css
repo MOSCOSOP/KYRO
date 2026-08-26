@@ -12,7 +12,6 @@
     var(--shadow-lg),
     var(--inset-top);
   transform-origin: top center;
-  animation: kyro-pop var(--duration-fast) var(--ease);
 }
 
 .item {

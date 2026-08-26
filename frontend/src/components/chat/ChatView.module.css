@@ -63,8 +63,10 @@
 }
 
 .name {
+  font-family: var(--font-display);
   font-size: var(--text-md);
   font-weight: 600;
+  letter-spacing: var(--tracking-title);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -87,6 +89,19 @@
   align-items: center;
   gap: var(--space-1);
   flex-shrink: 0;
+}
+
+/* Llamar y videollamar son las acciones que de verdad importan aquí: van
+   agrupadas en su propia píldora, no sueltas entre el resto de iconos. */
+.callActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  margin-right: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  box-shadow: var(--inset-top);
 }
 
 .body {

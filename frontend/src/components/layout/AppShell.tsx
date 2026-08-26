@@ -1,6 +1,9 @@
 import { useMemo, useRef, type ReactNode } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
+import { dur } from '@/lib/motion';
 import {
   Bell,
   Home,
@@ -47,37 +50,80 @@ export function AppShell({ children }: { children: ReactNode }) {
   const openProfile = useUI((state) => state.openProfile);
   const compact = useIsCompact();
   const closeModal = useUI((state) => state.closeModal);
+  const navRef = useRef<HTMLElement>(null);
+  const indicatorRef = useRef<HTMLSpanElement>(null);
+  const indicatorPlaced = useRef(false);
+  const location = useLocation();
 
   const unreadMessages = useMemo(
     () => conversations.reduce((total, conversation) => total + conversation.unreadCount, 0),
     [conversations],
   );
 
+  // El destino activo no cambia de fondo de golpe: una losa de luz se
+  // desliza y cambia de forma hasta encajar en el nuevo icono. Se mide en
+  // píxeles reales porque el carril cambia de vertical a horizontal en
+  // móvil, y ahí no hay un eje de CSS común entre ambas disposiciones.
+  useGSAP(
+    () => {
+      const nav = navRef.current;
+      const indicator = indicatorRef.current;
+      if (!nav || !indicator) return;
+      const active = nav.querySelector<HTMLElement>(`a.${styles.navItemActive}`);
+      if (!active) {
+        gsap.to(indicator, { opacity: 0, duration: dur('fast') });
+        return;
+      }
+
+      const target = {
+        left: active.offsetLeft,
+        top: active.offsetTop,
+        width: active.offsetWidth,
+        height: active.offsetHeight,
+        opacity: 1,
+      };
+
+      if (!indicatorPlaced.current) {
+        gsap.set(indicator, target);
+        indicatorPlaced.current = true;
+      } else {
+        gsap.to(indicator, { ...target, duration: dur('normal') });
+      }
+    },
+    { dependencies: [location.pathname, compact], scope: navRef },
+  );
+
   return (
     <div className={styles.shell}>
-      <nav className={styles.nav} aria-label="Navegación principal">
-        <Logo size="sm" markOnly className={styles.brand} />
+      <nav ref={navRef} className={styles.nav} aria-label="Navegación principal">
+        <span ref={indicatorRef} className={styles.navIndicator} aria-hidden />
 
-        <NavItem to="/" label="Inicio" icon={<Home size={19} />} end />
-        <NavItem
-          to="/mensajes"
-          label="Mensajes"
-          icon={<MessageCircle size={19} />}
-          badge={unreadMessages}
-        />
-        <NavItem to="/comunidades" label="Comunidades" icon={<Users size={19} />} />
-        <NavItem
-          to="/actividad"
-          label="Actividad"
-          icon={<Bell size={19} />}
-          badge={unreadNotifications}
-        />
-        {/*
-          En una barra inferior no caben siete destinos con su nombre. En
-          pantallas estrechas se queda lo que se usa a diario y el resto vive en
-          el menú del avatar, que sigue a un toque de distancia.
-        */}
-        <NavItem to="/llamadas" label="Llamadas" icon={<Phone size={19} />} desktopOnly />
+        <div className={styles.brandTile} aria-hidden>
+          <Logo size="sm" markOnly className={styles.brand} />
+        </div>
+
+        <div className={styles.navGroup}>
+          <NavItem to="/" label="Inicio" icon={<Home size={19} />} end />
+          <NavItem
+            to="/mensajes"
+            label="Mensajes"
+            icon={<MessageCircle size={19} />}
+            badge={unreadMessages}
+          />
+          <NavItem to="/comunidades" label="Comunidades" icon={<Users size={19} />} />
+          <NavItem
+            to="/actividad"
+            label="Actividad"
+            icon={<Bell size={19} />}
+            badge={unreadNotifications}
+          />
+          {/*
+            En una barra inferior no caben siete destinos con su nombre. En
+            pantallas estrechas se queda lo que se usa a diario y el resto vive en
+            el menú del avatar, que sigue a un toque de distancia.
+          */}
+          <NavItem to="/llamadas" label="Llamadas" icon={<Phone size={19} />} desktopOnly />
+        </div>
 
         <span className={styles.navSpacer} />
 
@@ -90,6 +136,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             title="Buscar (Ctrl+K)"
           >
             <Search size={19} />
+            <span className={styles.navLabel}>Buscar</span>
           </button>
           <NavItem to="/ajustes" label="Ajustes" icon={<Settings size={19} />} desktopOnly />
           {user ? (
@@ -109,7 +156,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {children}
 
       {menu.anchor && user ? (
-        <Menu anchor={menu.anchor} onClose={menu.close} label="Tu cuenta">
+        <Menu anchor={menu.anchor} open={menu.open} onClose={menu.close} label="Tu cuenta">
           <MenuHeading>{user.displayName}</MenuHeading>
           {STATUSES.map((status) => (
             <MenuItem
@@ -218,13 +265,14 @@ function NavItem({
     <NavLink
       to={to}
       end={end}
+      aria-label={label}
       className={({ isActive }) =>
         clsx(styles.navItem, isActive && styles.navItemActive, desktopOnly && styles.desktopOnly)
       }
       title={`${label} ${brand.titleSeparator} ${brand.name}`}
     >
       {icon}
-      <span>{label}</span>
+      <span className={styles.navLabel}>{label}</span>
       {badge > 0 ? (
         <span className={styles.navBadge}>
           <Badge count={badge} />

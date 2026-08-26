@@ -2,7 +2,11 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { X } from 'lucide-react';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { IconButton } from './Button';
+import { usePresence } from '@/hooks/usePresence';
+import { dur } from '@/lib/motion';
 import styles from './Modal.module.css';
 
 interface ModalProps {
@@ -28,6 +32,18 @@ export function Modal({
   hideClose,
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const { mounted, phase, onExitComplete } = usePresence(open);
+
+  // El bloqueo de scroll dura lo que el modal está en pantalla, salida incluida.
+  useEffect(() => {
+    if (!mounted) return;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, [mounted]);
 
   useEffect(() => {
     if (!open) return;
@@ -64,21 +80,41 @@ export function Modal({
       target?.focus();
     }, 30);
 
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
     return () => {
       document.removeEventListener('keydown', onKeyDown);
       window.clearTimeout(timer);
-      document.body.style.overflow = overflow;
       previous?.focus?.();
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  // Entra con el filo y el fondo a la vez; sale un poco más rápido, sin
+  // esperar a que el backdrop termine de irse.
+  useGSAP(
+    () => {
+      if (!mounted) return;
+      const backdrop = backdropRef.current;
+      const panel = panelRef.current;
+      if (!backdrop || !panel) return;
+
+      if (phase === 'enter') {
+        gsap.set(backdrop, { opacity: 0 });
+        gsap.set(panel, { opacity: 0, y: 10, scale: 0.97 });
+        gsap.to(backdrop, { opacity: 1, duration: dur('normal') });
+        gsap.to(panel, { opacity: 1, y: 0, scale: 1, duration: dur('normal') });
+      } else {
+        const tl = gsap.timeline({ onComplete: onExitComplete });
+        tl.to(panel, { opacity: 0, y: 8, scale: 0.97, duration: dur('fast') }, 0);
+        tl.to(backdrop, { opacity: 0, duration: dur('fast') }, 0);
+      }
+    },
+    { dependencies: [phase, mounted], scope: backdropRef },
+  );
+
+  if (!mounted) return null;
 
   return createPortal(
     <div
+      ref={backdropRef}
       className={styles.backdrop}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();

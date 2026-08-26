@@ -44,7 +44,13 @@ body {
 
 h1,
 h2,
-h3,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-title);
+}
+
 h4 {
   font-weight: 600;
   line-height: var(--leading-tight);

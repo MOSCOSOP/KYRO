@@ -2,53 +2,74 @@
  * KYRO · tokens de diseño.
  *
  * La identidad sale del logotipo: una K angular casi negra con un filo de luz
- * que va del azul al violeta. De ahí las tres reglas del sistema:
+ * que va del azul al violeta. De ahí las reglas del sistema:
  *
- *   1. El fondo es negro, no gris oscuro. Las superficies se separan por tono,
- *      no por bordes marcados.
+ *   1. El fondo es negro, no gris oscuro. Las superficies se separan por tono
+ *      Y por función: la navegación, la lista y el contenido no son la misma
+ *      superficie con distinto padding — cada nivel tiene su propio peso.
  *   2. El color es luz, no relleno. El acento aparece como filo, foco o brillo;
  *      casi nunca como fondo sólido de grandes áreas.
  *   3. La geometría es precisa: radios contenidos, bordes de 1px, nada blando.
+ *   4. Los titulares llevan una voz propia (Space Grotesk); el cuerpo y la
+ *      interfaz hablan con Inter. Dos voces, no una sola repetida en todos
+ *      los tamaños.
  *
  * Ningún componente define colores propios: todos salen de aquí.
  */
 
 :root {
   /* ------------------------------- Superficies --------------------------- */
-  /* Del fondo hacia el frente. Cada nivel sube un punto de tono. */
+  /* Del fondo hacia el frente. Cada nivel sube un punto de tono y de peso. */
   --bg-deep: #050608;
-  --bg: #080a0e;
-  --surface: #0f1217;
-  --surface-2: #151920;
-  --surface-3: #1c212a;
-  --surface-hover: #191e26;
-  --border: #1f242e;
-  --border-strong: #2d3441;
+  --bg: #08090d;
+  --nav-surface: #07080b;
+  --surface: #10131a;
+  --surface-2: #171b23;
+  --surface-3: #1e232d;
+  --surface-hover: #1a1f28;
+  --surface-raised: #20252f;
+  --border: #20252f;
+  --border-strong: #2f3644;
+  --border-soft: rgba(255, 255, 255, 0.05);
+
+  /* Burbuja de mensaje propio: el acento a muy poca intensidad, sobre una
+     superficie propia en vez de un simple filo. */
+  --bubble-mine: linear-gradient(165deg, rgba(107, 132, 255, 0.16), rgba(124, 92, 255, 0.09));
+  --bubble-mine-border: rgba(124, 132, 255, 0.28);
+  --bubble-theirs: var(--surface-2);
+  --bubble-theirs-border: var(--border-soft);
 
   /* --------------------------------- Texto ------------------------------- */
-  --text: #f2f4f7;
-  --text-secondary: #949cab;
-  --text-tertiary: #6a7280;
+  --text: #f4f6fa;
+  --text-secondary: #9aa2b3;
+  --text-tertiary: #6b7280;
   --text-inverse: #08090c;
 
   /* --------------------------------- Marca ------------------------------- */
   /* Los dos extremos del filo de luz del logotipo. */
-  --brand-blue: #4c7dff;
-  --brand-violet: #a46bff;
+  --brand-blue: #5286ff;
+  --brand-violet: #a86bff;
   --brand-gradient: linear-gradient(135deg, var(--brand-blue), var(--brand-violet));
   --brand-gradient-soft: linear-gradient(
     135deg,
-    rgba(76, 125, 255, 0.16),
-    rgba(164, 107, 255, 0.16)
+    rgba(82, 134, 255, 0.16),
+    rgba(168, 107, 255, 0.16)
+  );
+  /* Recorrido más largo, para bordes y filos que necesitan más distancia. */
+  --brand-gradient-wide: linear-gradient(
+    90deg,
+    var(--brand-blue) 0%,
+    var(--brand-violet) 50%,
+    var(--brand-blue) 100%
   );
 
   /* Acento sólido: el punto medio del filo. */
-  --accent: #6b84ff;
-  --accent-hover: #8095ff;
+  --accent: #6f89ff;
+  --accent-hover: #8399ff;
   --accent-active: #5a71e8;
-  --accent-soft: rgba(107, 132, 255, 0.14);
-  --accent-softer: rgba(107, 132, 255, 0.07);
-  --accent-border: rgba(107, 132, 255, 0.38);
+  --accent-soft: rgba(111, 137, 255, 0.15);
+  --accent-softer: rgba(111, 137, 255, 0.08);
+  --accent-border: rgba(111, 137, 255, 0.4);
   --on-accent: #ffffff;
 
   /* -------------------------------- Estados ------------------------------ */
@@ -69,6 +90,9 @@
   /* ------------------------------ Tipografía ----------------------------- */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu,
     'Helvetica Neue', sans-serif;
+  /* Voz de los titulares: más geométrica, un poco más ancha. Se usa poco y
+     por eso se nota — logo, estados, secciones, la frase grande del login. */
+  --font-display: 'Space Grotesk', var(--font-sans);
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --text-xs: 0.6875rem; /* 11px */
@@ -79,15 +103,17 @@
   --text-xl: 1.375rem; /* 22px */
   --text-2xl: 1.75rem; /* 28px */
   --text-3xl: 2.25rem; /* 36px */
+  --text-4xl: 2.875rem; /* 46px */
 
-  --leading-tight: 1.2;
+  --leading-tight: 1.15;
   --leading-normal: 1.5;
   --leading-relaxed: 1.65;
 
   /* El texto grande va más cerrado; el pequeño, más abierto. */
-  --tracking-display: -0.03em;
+  --tracking-display: -0.035em;
   --tracking-title: -0.015em;
   --tracking-wide: 0.08em;
+  --tracking-eyebrow: 0.12em;
 
   /* -------------------------------- Espacio ------------------------------ */
   --space-1: 0.25rem;
@@ -102,18 +128,20 @@
   --space-16: 4rem;
 
   /* -------------------------------- Formas ------------------------------- */
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-sm: 7px;
+  --radius: 11px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
   --radius-full: 999px;
 
   /* Sombras oscuras y limpias: profundidad, no niebla. */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.6);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --shadow-float: 0 4px 16px rgba(0, 0, 0, 0.35);
   /* Brillo de marca: solo para lo que está realmente activo. */
-  --glow-accent: 0 0 24px rgba(107, 132, 255, 0.22);
+  --glow-accent: 0 0 24px rgba(111, 137, 255, 0.24);
+  --glow-accent-lg: 0 0 48px rgba(111, 137, 255, 0.22);
 
   /* Un único anillo de foco en toda la aplicación. */
   --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-border);
@@ -138,24 +166,25 @@
    * Las capas van de fondo a flotante. Cada nivel sube un poco de tono, de modo
    * que la jerarquía se lee sin necesidad de bordes marcados.
    */
-  --elevated: rgba(255, 255, 255, 0.03);
-  --elevated-strong: rgba(255, 255, 255, 0.05);
+  --elevated: rgba(255, 255, 255, 0.035);
+  --elevated-strong: rgba(255, 255, 255, 0.06);
   --inset-top: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --inset-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 
   /* Vidrio: solo para superficies flotantes, nunca para el fondo. */
-  --glass: rgba(18, 21, 27, 0.74);
-  --glass-strong: rgba(12, 14, 19, 0.88);
-  --glass-border: rgba(255, 255, 255, 0.07);
+  --glass: rgba(19, 22, 29, 0.76);
+  --glass-strong: rgba(13, 15, 20, 0.9);
+  --glass-border: rgba(255, 255, 255, 0.08);
   --glass-blur: blur(20px) saturate(150%);
 
   /* Luz ambiental: el filo del logotipo, muy abierto y muy tenue. */
-  --ambient: rgba(76, 125, 255, 0.08);
-  --ambient-weak: rgba(164, 107, 255, 0.05);
+  --ambient: rgba(82, 134, 255, 0.09);
+  --ambient-weak: rgba(168, 107, 255, 0.06);
 
   /* -------------------------------- Layout ------------------------------- */
-  --nav-width: 76px;
-  --sidebar-width: 320px;
-  --header-height: 56px;
+  --nav-width: 84px;
+  --sidebar-width: 336px;
+  --header-height: 60px;
   --composer-min-height: 44px;
 
   --z-base: 1;
@@ -182,13 +211,15 @@
 :root[data-theme='soft'] {
   --bg-deep: #0b0e13;
   --bg: #0f1218;
-  --surface: #161a21;
-  --surface-2: #1d222b;
-  --surface-3: #252c37;
-  --surface-hover: #212734;
-  --border: #262d39;
-  --border-strong: #37414f;
+  --nav-surface: #0c0f14;
+  --surface: #171c24;
+  --surface-2: #1e242e;
+  --surface-3: #262d38;
+  --surface-hover: #222835;
+  --surface-raised: #2a313d;
+  --border: #282f3b;
+  --border-strong: #3a4351;
 
-  --glass: rgba(26, 30, 38, 0.76);
-  --glass-strong: rgba(18, 22, 28, 0.9);
+  --glass: rgba(27, 32, 41, 0.78);
+  --glass-strong: rgba(19, 23, 30, 0.92);
 }

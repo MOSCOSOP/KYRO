@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
+import { dur } from '@/lib/motion';
+import { usePresence } from '@/hooks/usePresence';
 import {
   Bell,
   Bookmark,
@@ -68,15 +72,20 @@ export function CommandPalette() {
   const [loading, setLoading] = useState(false);
   const [index, setIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { mounted, phase, onExitComplete } = usePresence(open);
 
+  // Se limpia al terminar de salir, no al empezar: así el contenido no salta
+  // a vacío mientras el panel todavía se está despidiendo.
   useEffect(() => {
-    if (!open) {
+    if (!mounted) {
       setQuery('');
       setResults(EMPTY);
       setIndex(0);
     }
-  }, [open]);
+  }, [mounted]);
 
   /* Búsqueda en el servidor: solo cuando hay algo que buscar. */
   useEffect(() => {
@@ -368,7 +377,28 @@ export function CommandPalette() {
     setIndex(0);
   }, [query]);
 
-  if (!open) return null;
+  useGSAP(
+    () => {
+      if (!mounted) return;
+      const backdrop = backdropRef.current;
+      const panel = panelRef.current;
+      if (!backdrop || !panel) return;
+
+      if (phase === 'enter') {
+        gsap.set(backdrop, { opacity: 0 });
+        gsap.set(panel, { opacity: 0, y: -8, scale: 0.985 });
+        gsap.to(backdrop, { opacity: 1, duration: dur('fast') });
+        gsap.to(panel, { opacity: 1, y: 0, scale: 1, duration: dur('normal') });
+      } else {
+        const tl = gsap.timeline({ onComplete: onExitComplete });
+        tl.to(panel, { opacity: 0, y: -6, scale: 0.985, duration: dur('fast') }, 0);
+        tl.to(backdrop, { opacity: 0, duration: dur('fast') }, 0);
+      }
+    },
+    { dependencies: [phase, mounted], scope: backdropRef },
+  );
+
+  if (!mounted) return null;
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Escape') {
@@ -393,12 +423,14 @@ export function CommandPalette() {
 
   return createPortal(
     <div
+      ref={backdropRef}
       className={styles.backdrop}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}
     >
       <div
+        ref={panelRef}
         className={styles.panel}
         role="dialog"
         aria-modal="true"

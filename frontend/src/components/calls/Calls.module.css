@@ -28,6 +28,7 @@
 }
 
 .callTitle {
+  font-family: var(--font-display);
   font-size: var(--text-md);
   font-weight: 600;
   overflow: hidden;
@@ -243,6 +244,7 @@
 }
 
 .callName {
+  font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: 600;
 }
@@ -374,11 +376,12 @@
   width: 140px;
   height: 140px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--accent-border);
+  border: 1.5px solid var(--brand-blue);
   animation: ring-out 2.6s var(--ease) infinite;
 }
 
 .incomingRings::after {
+  border-color: var(--brand-violet);
   animation-delay: 1.3s;
 }
 
@@ -417,6 +420,7 @@
 }
 
 .incomingName {
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
   font-weight: 600;
   letter-spacing: var(--tracking-title);

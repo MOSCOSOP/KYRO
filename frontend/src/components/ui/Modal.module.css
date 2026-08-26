@@ -8,10 +8,10 @@
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  animation: kyro-fade-in var(--duration) var(--ease);
 }
 
 .panel {
+  position: relative;
   width: 100%;
   max-width: 480px;
   max-height: min(86vh, 720px);
@@ -23,8 +23,19 @@
   box-shadow:
     var(--shadow-lg),
     var(--inset-top);
-  animation: kyro-pop var(--duration) var(--ease);
   overflow: hidden;
+}
+
+/* La misma firma que en el login, la paleta de comandos y el compositor. */
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: var(--brand-gradient);
+  opacity: 0.7;
 }
 
 .wide {
@@ -47,8 +58,10 @@
 }
 
 .title {
+  font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: 600;
+  letter-spacing: var(--tracking-title);
 }
 
 .description {

@@ -108,19 +108,31 @@
 /* Lado de la marca */
 
 .brandSide {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  animation: kyro-rise var(--duration-slow) var(--ease) both;
+}
+
+/* La K del logotipo, enorme y casi invisible, detrás de la frase. Es una
+   firma, no una decoración: solo se percibe si se busca. */
+.watermark {
+  position: absolute;
+  top: -70px;
+  left: -60px;
+  opacity: 0.05;
+  z-index: -1;
+  pointer-events: none;
+  filter: saturate(0.6);
 }
 
 .statement {
-  font-size: clamp(1.6rem, 1.1rem + 2vw, var(--text-3xl));
+  font-size: clamp(1.9rem, 1.2rem + 2.6vw, var(--text-4xl));
   font-weight: 600;
   line-height: var(--leading-tight);
   letter-spacing: var(--tracking-display);
   color: var(--text);
-  max-width: 18ch;
+  max-width: 15ch;
 }
 
 .statementAccent {
@@ -140,24 +152,32 @@
 .marks {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  margin-top: var(--space-2);
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 
-.markRow {
+/* Cada promesa vive en su propia píldora: se lee como una lista de hechos
+   concretos, no como un párrafo más de marketing. */
+.markChip {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  padding: 7px var(--space-3) 7px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--elevated);
+  box-shadow: var(--inset-top);
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
 .markDot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: var(--radius-full);
   background: var(--brand-gradient);
   flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(111, 137, 255, 0.5);
 }
 
 @media (max-width: 939px) {
@@ -167,11 +187,16 @@
     gap: var(--space-4);
   }
 
+  .watermark {
+    display: none;
+  }
+
   .statement {
     max-width: 22ch;
   }
 
   .marks {
+    align-items: center;
     display: none;
   }
 }
@@ -190,19 +215,21 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-lg), var(--inset-top);
-  animation: panel-in var(--duration-slow) var(--ease) both;
-  animation-delay: 60ms;
+  overflow: hidden;
 }
 
-@keyframes panel-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.99);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+/* El filo de luz del logotipo, arriba del panel: la misma firma que aparece
+   en la paleta de comandos y en el compositor. Es lo que hace que las tres
+   piezas se lean como del mismo producto. */
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: var(--brand-gradient);
+  opacity: 0.8;
 }
 
 .head {
@@ -212,6 +239,7 @@
 }
 
 .title {
+  font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: 600;
   letter-spacing: var(--tracking-title);
@@ -321,18 +349,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  animation: step-in var(--duration) var(--ease) both;
-}
-
-@keyframes step-in {
-  from {
-    opacity: 0;
-    transform: translateX(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
 }
 
 /* -------------------------------- Identidad -------------------------------- */

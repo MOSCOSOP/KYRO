@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle, ArrowLeft, ArrowRight, AtSign } from 'lucide-react';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { LIMITS } from '@kyro/shared';
 import { ApiError, api } from '@/lib/api';
 import { pageTitle } from '@/config/brand';
+import { dur } from '@/lib/motion';
 import { useSession } from '@/store/session';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
@@ -46,10 +49,29 @@ export function Register() {
   const [usernameState, setUsernameState] = useState<UsernameState>({ status: 'idle' });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const stepPanelRef = useRef<HTMLDivElement>(null);
+  const prevStep = useRef(0);
 
   useEffect(() => {
     document.title = pageTitle('Crear cuenta');
   }, []);
+
+  // El paso entra desde el lado del que viene: a la derecha al avanzar, a la
+  // izquierda al retroceder. Es lo que CSS no puede saber sin duplicar estado.
+  useGSAP(
+    () => {
+      const panel = stepPanelRef.current;
+      if (!panel) return;
+      const direction = step >= prevStep.current ? 1 : -1;
+      prevStep.current = step;
+      gsap.fromTo(
+        panel,
+        { opacity: 0, x: 12 * direction },
+        { opacity: 1, x: 0, duration: dur('normal') },
+      );
+    },
+    { dependencies: [step], scope: stepPanelRef },
+  );
 
   /* Disponibilidad del @usuario mientras se escribe. */
   useEffect(() => {
@@ -165,7 +187,7 @@ export function Register() {
 
       <form className={styles.form} onSubmit={submit} noValidate>
         {step === 0 ? (
-          <div className={styles.stepPanel} key="cuenta">
+          <div className={styles.stepPanel} key="cuenta" ref={stepPanelRef}>
             <AuthField
               label="Correo"
               type="email"
@@ -212,7 +234,7 @@ export function Register() {
         ) : null}
 
         {step === 1 ? (
-          <div className={styles.stepPanel} key="identidad">
+          <div className={styles.stepPanel} key="identidad" ref={stepPanelRef}>
             <AuthField
               label="Tu nombre"
               value={displayName}
@@ -256,7 +278,7 @@ export function Register() {
         ) : null}
 
         {step === 2 ? (
-          <div className={styles.stepPanel} key="listo">
+          <div className={styles.stepPanel} key="listo" ref={stepPanelRef}>
             <div className={styles.ready}>
               <Avatar name={displayName} size="xl" />
               <div>

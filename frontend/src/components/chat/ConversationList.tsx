@@ -1,6 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
+import { dur, prefersReducedMotion } from '@/lib/motion';
 import {
   BellOff,
   Bookmark,
@@ -38,6 +41,8 @@ export function ConversationList({ activeId }: { activeId?: string }) {
   const [menuTarget, setMenuTarget] = useState<Conversation | null>(null);
   const confirm = useUI((state) => state.confirm);
   const navigate = useNavigate();
+  const listRef = useRef<HTMLDivElement>(null);
+  const animatedOnce = useRef(false);
 
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -50,6 +55,25 @@ export function ConversationList({ activeId }: { activeId?: string }) {
 
   const pinned = visible.filter((conversation) => conversation.pinned);
   const rest = visible.filter((conversation) => !conversation.pinned);
+
+  // Al cargar la lista por primera vez, las filas entran en cascada, no cada
+  // una por su cuenta cuando le toca: es un solo gesto, no una fila de fichas.
+  useGSAP(
+    () => {
+      if (!loaded || animatedOnce.current) return;
+      const items = listRef.current?.querySelectorAll<HTMLElement>(`.${styles.item}`);
+      if (!items || items.length === 0) return;
+      animatedOnce.current = true;
+      gsap.set(items, { opacity: 0, y: 6 });
+      gsap.to(items, {
+        opacity: 1,
+        y: 0,
+        duration: dur('normal'),
+        stagger: prefersReducedMotion() ? 0 : 0.02,
+      });
+    },
+    { dependencies: [loaded], scope: listRef },
+  );
 
   const setFlags = async (conversation: Conversation, flags: { muted?: boolean; pinned?: boolean }) => {
     try {
@@ -81,7 +105,7 @@ export function ConversationList({ activeId }: { activeId?: string }) {
     <div className={styles.panel}>
       <header className={styles.header}>
         <span className={styles.title}>Mensajes</span>
-        <span style={{ display: 'flex', gap: 2 }}>
+        <span className={styles.headerActions}>
           <IconButton label="Mensajes guardados" onClick={() => openModal('saved-messages')}>
             <Bookmark size={17} />
           </IconButton>
@@ -93,6 +117,7 @@ export function ConversationList({ activeId }: { activeId?: string }) {
 
       <div className={styles.search}>
         <Input
+          className={styles.searchInput}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Buscar conversación"
@@ -101,7 +126,7 @@ export function ConversationList({ activeId }: { activeId?: string }) {
         />
       </div>
 
-      <div className={styles.list}>
+      <div className={styles.list} ref={listRef}>
         {!loaded ? (
           <SkeletonList rows={7} />
         ) : visible.length === 0 ? (
@@ -154,7 +179,7 @@ export function ConversationList({ activeId }: { activeId?: string }) {
       </div>
 
       {menu.anchor && menuTarget ? (
-        <Menu anchor={menu.anchor} onClose={menu.close} label="Opciones de la conversación">
+        <Menu anchor={menu.anchor} open={menu.open} onClose={menu.close} label="Opciones de la conversación">
           <MenuItem
             icon={menuTarget.pinned ? <PinOff size={16} /> : <Pin size={16} />}
             onSelect={() => {
@@ -232,12 +257,12 @@ function Row({
       onContextMenu={onContextMenu}
     >
       {conversation.type === 'direct' && peer ? (
-        <Avatar user={peer} size="md" presence />
+        <Avatar user={peer} size="lg" presence />
       ) : conversation.avatarUrl ? (
-        <Avatar name={name} src={conversationAvatar(conversation, selfId)} size="md" square />
+        <Avatar name={name} src={conversationAvatar(conversation, selfId)} size="lg" square />
       ) : (
         <span className={styles.groupIcon}>
-          <Users size={17} />
+          <Users size={19} />
         </span>
       )}
 
